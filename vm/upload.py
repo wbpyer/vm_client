@@ -4,9 +4,33 @@ import json
 """这里面的方法，可以考虑封装成类。上传类，里面有各种方法，这个思路好。封装成类方法，而不是实例"""
 
 
+def mk_meta_data_leader(ret:dict,payload:dict) -> dict:
+    """
+
+    :param ret:
+    :param payload:
+    :return:
+    """
 
 
-def mk_meta_data(ret:dict):
+    mysql_date = {}
+    file_name = ret.get('Local file name')
+    mysql_date['file_name'] = file_name.split('\\')[-1]
+
+    mysql_date['path'] = "http://" + ret.get("Storage IP").decode() + "/" + ret.get('Remote file_id').decode()  # 最终路径
+
+    status_id = file_name.split('\\')[-2]
+    date_id = file_name.split('\\')[-3]
+    work_id = file_name.split('\\')[-4]
+    mysql_date['status_id'] = status_id
+    mysql_date['date_id'] = date_id
+    mysql_date['work_id'] = work_id
+    mysql_date['depart'] = payload.get('leader_depart')  # 需要什么数据，去负载里面求出来即可。
+    #上报领导的其他数据，如果和这个人相等，就直接拿，或者去token里，或者就留空。
+
+    return mysql_date
+
+def mk_meta_data(ret:dict,payload:dict):
     """
     创建sql前的数据准备，这里有两方面考虑
     一是上传文件成功之后，返回的数据
@@ -19,19 +43,19 @@ def mk_meta_data(ret:dict):
 
 # todo这里还要加上领导的数据，给报这个功能去用。
 
-    payload = {}
+    mysql_date = {}
     file_name = ret.get('Local file name')
-    payload['file_name'] = file_name.split('\\')[-1]
-    # 'D:\\test\\人\\日\\报\\新建文本文档.txt'
-    payload['path'] = "http://" + ret.get("Storage IP").decode() + "/" + ret.get('Remote file_id').decode()  # 最终路径
+    mysql_date['file_name'] = file_name.split('\\')[-1]
+
+    mysql_date['path'] = "http://" + ret.get("Storage IP").decode() + "/" + ret.get('Remote file_id').decode()  # 最终路径
 
     status_id= file_name.split('\\')[-2]
     date_id = file_name.split('\\')[-3]
     work_id = file_name.split('\\')[-4]
-    payload['status_id'] = status_id
-    payload['date_id'] = date_id
-    payload['work_id'] = work_id
-    payload['leader'] = 'leader'
+    mysql_date['status_id'] = status_id
+    mysql_date['date_id'] = date_id
+    mysql_date['work_id'] = work_id
+    mysql_date['depart'] = payload.get('depart') # 需要什么数据，去负载里面求出来即可。
 
     # if status_id in ['草','报','副','垃']:
     #
@@ -46,7 +70,7 @@ def mk_meta_data(ret:dict):
     #     payload['work_id'] = work_id
     # else:
     #     payload['work_id'] = '无'
-    return payload
+    return mysql_date
 
 
 

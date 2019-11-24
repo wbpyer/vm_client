@@ -3,16 +3,17 @@ import time
 import shutil
 # from vm.vm_main import Vmare
 from watchdog.observers import Observer
-from watchdog.events import *
+from watchdog.events import FileSystemEventHandler
 
 """watchdog只实现用户上报的功能，其他功能不用管，他也实现不了，这个已经明确稍后开发
 文件监控"""
 class FileEventHandler(FileSystemEventHandler):
 
-    PATH = "D:/test/副"
+    FU_PATH = "D:/test/副"
 
 
-    def __init__(self):
+    def __init__(self,vm):
+        self.vm = vm
         FileSystemEventHandler.__init__(self)
 
     def on_moved(self, event):
@@ -34,18 +35,18 @@ class FileEventHandler(FileSystemEventHandler):
 
                 try:
 
-                    while Vmare().upload(event.src_path):
-                        print("失败继续")
+                    while self.vm.upload_leader(event.src_path):  #先放到领导里面
+                        print("报送失败，继续报送")
 
                     print("file upload OK")
-                    shutil.move(event.src_path, self.PATH)
+                    shutil.move(event.src_path, self.FU_PATH)  #再放到自己的副本
                 except Exception as e:
-                    print(e)
-                    print("放在redis中")
+                    raise (e,"文件没有上报成功")
 
 
 
 
+        # todo  这里还有一个垃的逻辑需要完善,用户把文件扔进了垃圾里。可以0.2在实现。
 
 
 
@@ -71,14 +72,25 @@ class FileEventHandler(FileSystemEventHandler):
 if __name__ == "__main__":
     observer = Observer()
     event_handler = FileEventHandler()
-    observer.schedule(event_handler, r'D:/test', recursive=True)
+    observer.schedule(event_handler, r'F:/test', recursive=True)
     observer.start()
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        observer.stop()
+    work = True
+    while work:
+        time.sleep(1)
+        a = input("input:")
+        if a == 'quit':
+            work = False
+            print(a)
+    observer.stop()
     observer.join()
+
+
+
+
+
+
+
+
 
 
 

@@ -1,13 +1,14 @@
 import requests
 import json
 import time
-from vm.upload import upload_fdfs ,upload_mydb,mk_meta_data,connection,download_fdfs
-from vm.file_uilts import File_utils
+import os
+from vm.vm.upload import upload_fdfs ,upload_mydb,mk_meta_data,connection,download_fdfs,mk_meta_data_leader
+from vm.vm.file_uilts import File_utils
 from watchdog.observers import Observer
-from vm.working import FileEventHandler
+from vm.vm.working import FileEventHandler
 
 
-"""目前想到用FLASK接受请求。然后解析出来，今天不写了，业务基本完成，明天写接受服务器的请求解析。"""
+
 
 
 class Vmare():
@@ -16,9 +17,10 @@ class Vmare():
     数据格式是json字典形式。
     """
     PATH =r'D:/test'  # 工作区绝对路径地址
+    WORK = True #用来控制工作区监控的开闭
 
 
-    def __init__(self,payload:dict,user_id,user_name):
+    def __init__(self,payload:dict,user_id,user_name) :
         '''接到用户后，需要去做的工作。解析负载过来的数据,需要什么数据，就去字典里面拿'''
         self.role = payload.get('role')
         self.user_id = user_id
@@ -26,6 +28,12 @@ class Vmare():
         self.user_name = user_name
         self.db_name = str(self.user_id) + str(self.work_id) + self.user_name + self.role
         # self.depart = payload.get('depart')
+        self.payload = payload
+        if payload.get('leader_id') != None:
+
+            self.leader_db_name = payload.get('role') + payload.get('leader_work_id')  #拼出领导的库名
+        self.WORK = True       #用来控制工作区监控的开闭
+
 
 
     def start(self):
@@ -46,11 +54,14 @@ class Vmare():
             if download_fdfs(path):
 
                 File_utils.unzip(self.PATH)
+            else:
+                raise Exception("无法通过FDFS正常下载")
+
         except Exception as e:
-            print(e)
+            print("无法正常下载，通知运维检查服务器")
 
 
-    def upload(self,file,dbname):
+    def upload_exit(self,file):
         """
         替用户上传文件
         :param file:
@@ -58,10 +69,10 @@ class Vmare():
         """
         ret = upload_fdfs(file)
         if ret:
-            data = mk_meta_data(ret)
+            data = mk_meta_data(ret,self.payload)
 
-            service = connection('sun')
-            resp = upload_mydb(data, *service,dbname)
+            service = connection('db')
+            resp = upload_mydb(data, *service,self.db_name)
             if resp.status_code == 200:
                 return 0
             else:
@@ -70,51 +81,83 @@ class Vmare():
             return 1
 
 
+
+    def upload_leader(self,file):
+        """
+
+        :param file:
+        :return:
+        """
+        ret = upload_fdfs(file)
+        if ret:
+            data = mk_meta_data_leader(ret, self.payload)
+
+            service = connection('db')
+            resp = upload_mydb(data, *service, self.leader_db_name)
+            if resp.status_code == 200:
+                return 0
+            else:
+                return 1
+        else:
+            return 1
+
+
+
+
     def working(self):
         """
         实时监控文件，替用户完成草报副拉的文件功能
         :return:
         """
         observer = Observer()
-        event_handler = FileEventHandler()
-        observer.schedule(event_handler, r'D:/test', recursive=True)
+        event_handler = FileEventHandler(self)
+        observer.schedule(event_handler, self.PATH, recursive=True)
         observer.start()
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            observer.stop()
+
+        while self.WORK:
+            time.sleep(1)
+
+        observer.stop()
         observer.join()
 
 
     def exit(self):
         '''用户退出时，要做的工作。
         替用户保存好数据，两路，一个是单独，一个是打包，考虑用线程'''
+        self.WORK = False
         files = File_utils.get_all_file()
         for file in files:
             if len(file.split('\\')) > 4 and file.split('\\')[-2] in ['草', '报', '副', '垃']:
                 #如果符合条件就开始上传。不符合条件，就不管。
                 try:
 
-                    while self.upload(file):
+                    while self.upload_exit(file):
                         print("失败继续")
 
                     print("file upload OK")
                 except Exception as e:
-                    print(e)
-                    print("放在redis中")
+
+                    print(e,"记录日志那个文件没有保存成功")
                 #记录日志，那个用户的那个文件没有上传成功。
         try:
             zippath = File_utils.mk_package()
-            while self.upload(zippath):
+            while self.upload_exit(zippath):
                 print("失败继续")
             print("zip upload OK")
         except Exception as e:
-            print(e)
-            print("放在redis中")
+
+            print(e,"放在redis中备份起来")
 
 
-        print("全部执行完毕，可以清屏")
+        os.remove(self.PATH)
+        print("全部执行完毕，可以通知运维清屏,我可以用remove清理掉文件，")
+
+
+
+
+
+
+
 
 
 
