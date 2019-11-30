@@ -13,8 +13,16 @@ import time
 # print(token)
 
 # from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
-# s = Serializer('fdjsklafjkldsja', expires_in=600)
-# token = s.dumps({'id': 123,'name':'蒋工','role':"安全员"}) # user为model中封装过的对象
+# s = Serializer('fdjsklafjkldsja', expires_in=60000)
+# token = s.dumps({'leader_id': "3496",
+#                  'leader_name':'chen',
+#                  "leader_role":"安全员",
+#                     "leader_job_id":'0371',
+#                  'role':"安全员","role_id":6,
+#                  "job_id":'0012',
+#                  "department_id":5,
+#                  "department":'安全管理部'}) # user为model中封装过的对象  最新最全，的需要的token 。
+#
 # token = token.decode()
 # print(token)
 # d = {}
@@ -26,8 +34,21 @@ import time
 # print(s.loads(token))
 # dic = json.dumps(d)
 # print(dic)
-
+#
 B ={'id': 123,'name':'蒋工','role':"安全员"}
-print(B.get('u'))
+# print(B.get('u'))
 
+c =  {"user_name":"bili",
+        'payload':{'leader_id': "3496",
+                 'leader_name':'chen',
+                 "leader_post":"安全员",
+                    "leader_job_id":'0371',
+                 'post':"安全员","post_id":6,
+                 "job_id":'0012',
+                 "department_id":5,
+                 "department":'安全管理部'},
+        "user_id":761,
+        }
+
+print(json.dumps(c))
 

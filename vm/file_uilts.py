@@ -7,7 +7,7 @@ class File_utils():
     """
     工作区文件处理类。完成工作区文件遍历，打包。
     """
-    PATH = r'D:\test'  #工作区常量，
+    PATH = 'D:\\test'  #工作区常量，
     path_list = []
     @classmethod
     def get_all_file(cls,path= PATH,path_list= path_list):
@@ -31,6 +31,7 @@ class File_utils():
                 # print(com_path) #打印所有文件的绝对路径
             # print(com_path) # 打印所有文件和目录的绝对路径
 
+
     @classmethod
     def mk_package(cls,start_dir:str = PATH):
         """
@@ -43,17 +44,24 @@ class File_utils():
 
         z = zipfile.ZipFile(file_news, 'w', zipfile.ZIP_DEFLATED)
         for dir_path, dir_names, file_names in os.walk(start_dir):
-            f_path = dir_path.replace(start_dir, '')  # 这一句很重要，不replace的话，就从根目录开始复制
+
+            f_path = dir_path.replace(start_dir, '') # 这一句很重要，不replace的话，就从根目录开始复制
             f_path = f_path and f_path + os.sep or ''  # 实现当前文件夹以及包含的所有文件的压缩
+            for dir_name in dir_names:
+                z.write(os.path.join(dir_path, dir_name), f_path + dir_name)
+
             for filename in file_names:
+
                 z.write(os.path.join(dir_path, filename), f_path + filename)
+
+
         z.close()
         return file_news
 
 
 
     @classmethod
-    def unzip(cls,path = PATH):
+    def unzip(cls,path = 'D:\\test\\'):
         """
 
         :param path: 工作去路径
@@ -63,7 +71,7 @@ class File_utils():
 
         for file_name in file_list:
             # print(file_name)
-            if os.path.splitext(file_name)[-2] == '工作区':
+            if os.path.splitext(file_name)[-2] == 'test':
                 print(file_name)
 
                 file_zip = zipfile.ZipFile(path + file_name, 'r')
@@ -75,3 +83,5 @@ class File_utils():
 
 
 
+if __name__ == '__main__':
+    File_utils.mk_package("D:\\test")

@@ -2,23 +2,27 @@
 
 """测试文件，没有用"""
 
-# from fdfs_client.client import *
+from fdfs_client.client import *
 # # # #fdfs 潘森测试,目前删除好使，上传好使，下载
 # # #
-# trackers = get_tracker_conf(r'C:\Users\Admin\Desktop\client.conf')
-# client = Fdfs_client(trackers)
-# # ret = client.upload_by_filename(r'C:\Users\Admin\Desktop\珠海发桥123')
-# d = b'group1/M00/00/00/wKgdgV23bOyAXEQGAAAFqB-VPWM96.conf'  #传入这个就可以。
-# # print(client.get_meta_data(d))
-# # print(client.list_all_groups())
+trackers = get_tracker_conf(r'C:\Users\Admin\Desktop\client.conf')
+client = Fdfs_client(trackers)
+ret = client.upload_by_filename('D:\\test.zip')
+# d = b'group1/M00/00/0D/wKgdgV3AiEmAfHc9AAAAAAAAAAA210.txt'#传入这个就可以。
+# print(client.get_meta_data(d))
+# print(client.list_all_groups())
 #
 # # d.find(b'/')
 #
-# # ret = client.append_by_filename('C:\\Users\\Admin\\Desktop\\new1.txt',d)  #这个方法不行。运转不起来。
-# # ret = client.delete_file(d) 这个ok
+# ret = client.append_by_filename('C:\\Users\\Admin\\Desktop\\new1.txt',d)  #这个方法不行。运转不起来。
+# ret = client.delete_file(ret.get('Remote file_id'))
+
+#删成功了没事，如果没有这个文件，就会报错，所以这里得捕获异常。
+
+
 #
-# ret = client.download_to_file('C:\\Users\\Admin\\Desktop\\123',d)  #下载功能已经实现
-# print(ret)
+# ret = client.download_to_file('C:\\Users\\Admin\\Desktop\\12345888',d)  #下载功能已经实现
+print(ret)
 
 
 

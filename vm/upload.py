@@ -1,36 +1,13 @@
-from fdfs_client.client import *
+from fdfs_client.client import get_tracker_conf,Fdfs_client
 import requests
 import json
+import random
+
+
+
 """这里面的方法，可以考虑封装成类。上传类，里面有各种方法，这个思路好。封装成类方法，而不是实例"""
 
-
-def mk_meta_data_leader(ret:dict,payload:dict) -> dict:
-    """
-
-    :param ret:
-    :param payload:
-    :return:
-    """
-
-
-    mysql_date = {}
-    file_name = ret.get('Local file name')
-    mysql_date['file_name'] = file_name.split('\\')[-1]
-
-    mysql_date['path'] = "http://" + ret.get("Storage IP").decode() + "/" + ret.get('Remote file_id').decode()  # 最终路径
-
-    status_id = file_name.split('\\')[-2]
-    date_id = file_name.split('\\')[-3]
-    work_id = file_name.split('\\')[-4]
-    mysql_date['status_id'] = status_id
-    mysql_date['date_id'] = date_id
-    mysql_date['work_id'] = work_id
-    mysql_date['depart'] = payload.get('leader_depart')  # 需要什么数据，去负载里面求出来即可。
-    #上报领导的其他数据，如果和这个人相等，就直接拿，或者去token里，或者就留空。
-
-    return mysql_date
-
-def mk_meta_data(ret:dict,payload:dict):
+def mk_meta_data_zip(ret:dict,payload:dict,user_id,user_name) -> dict :
     """
     创建sql前的数据准备，这里有两方面考虑
     一是上传文件成功之后，返回的数据
@@ -47,7 +24,75 @@ def mk_meta_data(ret:dict,payload:dict):
     file_name = ret.get('Local file name')
     mysql_date['file_name'] = file_name.split('\\')[-1]
 
-    mysql_date['path'] = "http://" + ret.get("Storage IP").decode() + "/" + ret.get('Remote file_id').decode()  # 最终路径
+    # mysql_date['path'] = "http://" + ret.get("Storage IP").decode() + "/" + ret.get('Remote file_id').decode()  # 最终路径
+    mysql_date['path'] = ret.get('Remote file_id').decode()
+
+
+    mysql_date['department_id'] = payload.get('department_id') # 需要什么数据，去负载里面求出来即可。
+    mysql_date['department'] = payload.get('department')
+    mysql_date['role'] = payload.get('role')
+    mysql_date["role_id"] = payload.get('role_id')
+
+    mysql_date["user_id"] = user_id
+    mysql_date["user_name"] = user_name
+
+    return mysql_date
+
+
+
+def mk_meta_data_leader(ret:dict,payload:dict,user_id,user_name) -> dict:
+    """
+
+    :param ret:
+    :param payload:
+    :return:
+    """
+
+
+    mysql_date = {}
+    file_name = ret.get('Local file name')
+    mysql_date['file_name'] = file_name.split('\\')[-1]
+
+    # mysql_date['path'] = "http://" + ret.get("Storage IP").decode() + "/" + ret.get('Remote file_id').decode()  # 最终路径
+    mysql_date['path'] = ret.get('Remote file_id').decode()
+    status_id = file_name.split('\\')[-2]
+    date_id = file_name.split('\\')[-3]
+    work_id = file_name.split('\\')[-4]
+    mysql_date['status_id'] = status_id
+    mysql_date['date_id'] = date_id
+    mysql_date['work_id'] = work_id
+    mysql_date['role'] = payload.get('role')
+    mysql_date["role_id"] = payload.get('role_id')
+
+    mysql_date["user_id"] = user_id
+    mysql_date["user_name"] = user_name
+
+    mysql_date['department_id'] = payload.get('department_id')  # 需要什么数据，去负载里面求出来即可。
+    mysql_date['department'] = payload.get('department')
+    # 需要什么数据，去负载里面求出来即可。
+    #上报领导的其他数据，如果和这个人相等，就直接拿，或者去token里，或者就留空。
+    print(mysql_date)
+    return mysql_date
+
+def mk_meta_data(ret:dict,payload:dict,user_id,user_name) -> dict :
+    """
+    创建sql前的数据准备，这里有两方面考虑
+    一是上传文件成功之后，返回的数据
+    二是token 里的用户数据。 但是这个目前我还想不到解析方式，暂时再说，先用上面的把程序跑通。
+
+    :param ret:字典
+    :return:
+    字典
+    """
+
+# todo这里还要加上领导的数据，给报这个功能去用。
+
+    mysql_date = {}
+    file_name = ret.get('Local file name')
+    mysql_date['file_name'] = file_name.split('\\')[-1]
+
+    # mysql_date['path'] = "http://" + ret.get("Storage IP").decode() + "/" + ret.get('Remote file_id').decode()  # 最终路径
+    mysql_date['path'] = ret.get('Remote file_id').decode()
 
     status_id= file_name.split('\\')[-2]
     date_id = file_name.split('\\')[-3]
@@ -55,7 +100,15 @@ def mk_meta_data(ret:dict,payload:dict):
     mysql_date['status_id'] = status_id
     mysql_date['date_id'] = date_id
     mysql_date['work_id'] = work_id
-    mysql_date['depart'] = payload.get('depart') # 需要什么数据，去负载里面求出来即可。
+    mysql_date['department_id'] = payload.get('department_id') # 需要什么数据，去负载里面求出来即可。
+    mysql_date['department'] = payload.get('department')
+    mysql_date['role'] = payload.get('role')
+    mysql_date["role_id"] = payload.get('role_id')
+
+    mysql_date["user_id"] = user_id
+    mysql_date["user_name"] = user_name
+
+
 
     # if status_id in ['草','报','副','垃']:
     #
@@ -92,7 +145,7 @@ def upload_fdfs(path:str):
 
 
 
-def upload_mydb(payload:dict,address,port,dbname:str):
+def upload_mydb(payload:dict,address,port,dbname:str,type):
     """
     上传mysql
     api,向数据库端发送请求，把数据打过去就行，接受数据端的返回就可以。
@@ -103,24 +156,80 @@ def upload_mydb(payload:dict,address,port,dbname:str):
     """
     # print(payload)
     # print("http://"+ str(address) +":"+str(port)+"/db/"+ dbname + "/excel/add")
-    resp = requests.post("http://"+ str(address) +":"+str(port)+"/db/"+ dbname + "/excel/add", data=payload)
 
+    if type == "zip":
+        resp = requests.post("http://"+ str(address) +":"+str(port)+"/db/"+ dbname + "/vm_latest/add", json=payload)
+    elif type == "leader":
+
+        resp = requests.post("http://" + str(address) + ":" + str(port) + "/db/" + dbname + "/excel/add/leader", json=payload)
+    elif type == "delete":
+        resp = requests.post("http://"+ str(address) +":"+str(port)+"/db/"+ dbname + "/excel/delete", json=payload)
+
+
+    else:
+        resp = requests.post("http://"+ str(address) +":"+str(port)+"/db/"+ dbname + "/excel/add", json=payload)
 
     return resp
 
 
 
-def download_fdfs(path:str):
+def download_fdfs(path):
     """
     #下载FDFS，api
     :param path:文件的下载路径
     :return: 下载后FDFS返回的信息
     """
-    PATH = 'C:\\Users\\Admin\\Desktop\\工作区.zip' # 下到本机后变成什么。
+    PATH = 'D:\\test\\test.zip' # 下到本机后变成什么。
     trackers = get_tracker_conf(r'C:\Users\Admin\Desktop\client.conf')
     client = Fdfs_client(trackers)
     ret = client.download_to_file(PATH, path)
     return ret
+
+
+def download_fdfs_file(path:str,name,work_id,date_id):
+    """
+    下载别人上报的数据
+    :param path:  下载路径
+    :param name:  文件名
+    :param work_id:  项目id
+    :param date_id:  日期id
+    :return:
+    """
+     # 下到本机后变成什么。
+
+    if date_id == 1:
+        date_id = "日"
+    elif date_id == 2:
+        date_id = "周"
+    elif date_id == 3:
+        date_id = "旬"
+    elif date_id == 4:
+        date_id = "月"
+    elif date_id == 5:
+        date_id = "季"
+    elif date_id == 6:
+        date_id = "半"
+    elif date_id == 7:
+        date_id = "年"
+
+
+
+    if work_id == 1:
+        work_id = "人"
+    elif work_id == 2:
+        work_id = "机"
+    elif work_id == 3:
+        work_id = "物"
+    elif work_id == 4:
+        work_id = "法"
+
+
+    dest = "D:\\test\\{0}\\{1}\\收\\".format(work_id,date_id)+ name
+    trackers = get_tracker_conf(r'C:\Users\Admin\Desktop\client.conf')
+    client = Fdfs_client(trackers)
+    ret = client.download_to_file(dest, path)
+    return ret
+
 
 
 
@@ -142,7 +251,9 @@ def connection(service:str):
     resp = json.loads(resp.text)
     address = resp.get('address')
     port = resp.get('port')
+
     return address,port
 
 
-
+if __name__ == "__main__":
+    print(connection("db"))
