@@ -181,7 +181,7 @@ def download_fdfs(path):
     :param path:文件的下载路径
     :return: 下载后FDFS返回的信息
     """
-    PATH = 'D:\\test\\test.zip' # 下到本机后变成什么。
+    PATH = 'C:\\Users\\Admin\\Desktop\\test\\test.zip' # 下到本机后变成什么。
     trackers = get_tracker_conf(r'C:\Users\Admin\Desktop\client.conf')
     client = Fdfs_client(trackers)
     ret = client.download_to_file(PATH, path)
@@ -226,7 +226,7 @@ def download_fdfs_file(path:str,name,work_id,date_id):
         work_id = "法"
 
 
-    dest = "D:\\test\\{0}\\{1}\\收\\".format(work_id,date_id)+ name
+    dest = "C:\\Users\\Admin\\Desktop\\test\\{0}\\{1}\\收\\".format(work_id,date_id)+ name
     trackers = get_tracker_conf(r'C:\Users\Admin\Desktop\client.conf')
     client = Fdfs_client(trackers)
     ret = client.download_to_file(dest, path)

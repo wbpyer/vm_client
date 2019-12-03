@@ -1,7 +1,9 @@
-
+import logging
 from flask import Flask,request,jsonify
 from vm.vm_main import Vmare
 from flask_cors import CORS
+
+
 
 
 
@@ -24,6 +26,8 @@ def vm_exit():
 
     except Exception as e:
         print(e)
+        app.logger.error("error_msg: %s remote_ip: %s user_agent: %s ",e,request.remote_addr,request.user_agent.browser)
+
         return "exit is fail", 404
 
 
@@ -58,6 +62,8 @@ def vm_data():
     except Exception as e:
 
         print("记录日志，通知运维 我是最外层程序 错误:{0}".format(e))
+        app.logger.error("error_msg: %s remote_ip: %s user_agent: %s ",e,request.remote_addr,request.user_agent.browser)
+
         res = {'status': 404, "data": "无法初始化数据"}
         return jsonify(res),404
 
@@ -70,6 +76,7 @@ def vm_health():
     健康检查接口，心跳监测，判断服务是否活着。
     :return:
     """
+
     return "ok",200
 
 
@@ -78,7 +85,13 @@ def vm_health():
 
 if __name__ == '__main__':
     print(app.url_map)
-    app.run(host = '127.0.0.1',port=5001)
+    handler = logging.FileHandler('C:\\logs\\vm_server.log', encoding='UTF-8')
+    handler.setLevel(logging.DEBUG)
+    logging_format = logging.Formatter("%(asctime)s app:flask fun:%(funcName)s %(levelname)s %(message)s")
+    handler.setFormatter(logging_format)
+    app.logger.addHandler(handler)
+    app.run(host = '0.0.0.0',port=5001)
+
 
 
 

@@ -19,7 +19,7 @@ class Vmare():
     客户每次登陆虚拟机，必须带着token,里面是各种信息。 要用。从前端，发过来，我去解析，然后拿到数据，
     数据格式是json字典形式。
     """
-    PATH ='D:\\test'  # 工作区绝对路径地址
+    PATH ='C:\\Users\\Admin\\Desktop\\test'  # 工作区绝对路径地址
 
 
 

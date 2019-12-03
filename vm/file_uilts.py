@@ -7,10 +7,10 @@ class File_utils():
     """
     工作区文件处理类。完成工作区文件遍历，打包。
     """
-    PATH = 'D:\\test'  #工作区常量，
+    # PATH = 'D:\\test'  #工作区常量，
     path_list = []
     @classmethod
-    def get_all_file(cls,path= PATH,path_list= path_list):
+    def get_all_file(cls,path,path_list= path_list):
         """
         遍历工作区API,拿到所有文件
         :param path:  虚拟机工作区路径
@@ -33,7 +33,7 @@ class File_utils():
 
 
     @classmethod
-    def mk_package(cls,start_dir:str = PATH):
+    def mk_package(cls,start_dir:str ):
         """
         文件夹打包
         :param start_dir:元路径
@@ -61,7 +61,7 @@ class File_utils():
 
 
     @classmethod
-    def unzip(cls,path = 'D:\\test\\'):
+    def unzip(cls,path = 'C:\\Users\\Admin\\Desktop\\test\\'):
         """
         zip解包裹
         :param path: 工作去路径
