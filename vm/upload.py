@@ -26,6 +26,7 @@ def mk_meta_data_zip(ret:dict,payload:dict,user_id,user_name) -> dict :
 
     # mysql_date['path'] = "http://" + ret.get("Storage IP").decode() + "/" + ret.get('Remote file_id').decode()  # 最终路径
     mysql_date['path'] = ret.get('Remote file_id').decode()
+    mysql_date['file_ip'] = ret.get('Storage IP').decode()
 
 
     mysql_date['department_id'] = payload.get('department_id') # 需要什么数据，去负载里面求出来即可。
@@ -55,6 +56,7 @@ def mk_meta_data_leader(ret:dict,payload:dict,user_id,user_name) -> dict:
 
     # mysql_date['path'] = "http://" + ret.get("Storage IP").decode() + "/" + ret.get('Remote file_id').decode()  # 最终路径
     mysql_date['path'] = ret.get('Remote file_id').decode()
+    mysql_date['file_ip'] = ret.get('Storage IP').decode()
     status_id = file_name.split('\\')[-2]
     date_id = file_name.split('\\')[-3]
     work_id = file_name.split('\\')[-4]
@@ -93,7 +95,7 @@ def mk_meta_data(ret:dict,payload:dict,user_id,user_name) -> dict :
 
     # mysql_date['path'] = "http://" + ret.get("Storage IP").decode() + "/" + ret.get('Remote file_id').decode()  # 最终路径
     mysql_date['path'] = ret.get('Remote file_id').decode()
-
+    mysql_date['file_ip'] = ret.get('Storage IP').decode()
     status_id= file_name.split('\\')[-2]
     date_id = file_name.split('\\')[-3]
     work_id = file_name.split('\\')[-4]
@@ -241,19 +243,24 @@ def connection(service:str):
     :param server:
     :return:
     """
-    main_list = ['http://127.0.0.1:5000/service/'+ service, 'http://127.0.0.1:5000/service/'+ service]
+    main_list = ['http://127.0.0.1:5002/service/'+ service, 'http://127.0.0.1:5002/service/'+ service]
+
     server = random.choice(main_list)
     resp = requests.get(server)
+    print(resp.status_code)
     #这里主服务已经做健康检查了，如果这也不行，那证明服务器全挂了，直接抛异常就行，下载不了，也上传不了。
     if resp.status_code != 200:
         raise Exception("无法连接服务器")
 
     resp = json.loads(resp.text)
-    address = resp.get('address')
-    port = resp.get('port')
+    data = resp.get("data")
+    address = data.get('address')
+    port = data.get('port')
 
     return address,port
 
 
 if __name__ == "__main__":
     print(connection("db"))
+
+

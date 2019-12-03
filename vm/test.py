@@ -7,7 +7,7 @@ from fdfs_client.client import *
 # # #
 trackers = get_tracker_conf(r'C:\Users\Admin\Desktop\client.conf')
 client = Fdfs_client(trackers)
-ret = client.upload_by_filename('D:\\test.zip')
+ret = client.upload_by_filename('C:\\Users\\Admin\\Desktop\\1125.txt')
 # d = b'group1/M00/00/0D/wKgdgV3AiEmAfHc9AAAAAAAAAAA210.txt'#传入这个就可以。
 # print(client.get_meta_data(d))
 # print(client.list_all_groups())
@@ -83,4 +83,7 @@ import os
 #         for file in fz.namelist():
 #             fz.extract(file, dst_dir)
 #
+
+
+
 

@@ -63,7 +63,7 @@ class File_utils():
     @classmethod
     def unzip(cls,path = 'D:\\test\\'):
         """
-
+        zip解包裹
         :param path: 工作去路径
         :return:
         """
@@ -84,4 +84,5 @@ class File_utils():
 
 
 if __name__ == '__main__':
-    File_utils.mk_package("D:\\test")
+    # File_utils.mk_package("D:\\test")
+    print("ok")

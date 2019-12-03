@@ -4,7 +4,7 @@ import shutil
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-"""watchdog文件监控"""
+"""watchdog文件监控体系"""
 
 
 
@@ -18,15 +18,22 @@ class FileEventHandler(FileSystemEventHandler):
         FileSystemEventHandler.__init__(self)
 
     def on_moved(self, event):
+        """
+        只有改名才会走这个接口
+        :param event:
+        :return:
+        """
         if not event.is_directory:
-            print("文件改名{0}".format(event.dest_path))
-            #todo 这有一个问题就是，改名之后，mysql里之前的原文件，就冗余掉了，新建了一份新的，这个下一版本再说。
-            self.vm.filelist.append(event.dest_path)
+            print("文件改名src:{0},des:{1}".format(event.src_path,event.dest_path))
+            self.vm.move_name(event.src_path)
+            #todo 改名冗余问题，已经解决
+
+            self.vm.filelist.append(event.dest_path) # 目标文件存起来，最后统一做处理。
 
 
     def on_created(self, event):
         """
-        重点监控，报这个文件夹，做两件事情。一旦有新的创建，立刻放到上个人的领导，同时把这个移动到福本里面
+        重点监控，报这个文件夹，做两件事情。一旦有新的创建，立刻放到上个人的领导，同时把这个移动到副里面
         :param event:
         :return:
         """
@@ -48,10 +55,17 @@ class FileEventHandler(FileSystemEventHandler):
                         print("file upload leader OK")
 
 
-                        dest = event.src_path.replace("报", "副")  #todo  这里这样会有问题，会把有报字的文件名给替换掉，所以这里要重写，下一版本。
-                        print(dest)
+                        file_name = event.src_path.split('\\')[-1]
+
+                        src = event.src_path.replace("报", "副")
+                        dest = src.split('\\')[:-1]
+                        des = ""
+                        for i in dest:
+                            des = des + i + "\\"
+                        dest = des + file_name
+
                         shutil.move(event.src_path, dest)  #再放到自己的副本
-                        # self.vm.upload_exit()
+
 
 
                     except Exception as e:
@@ -77,7 +91,9 @@ class FileEventHandler(FileSystemEventHandler):
         if not event.is_directory:
             print("file deleted:{0}".format(event.src_path))
 
+
     def on_modified(self, event):
+        #文件在不同文件夹中移动走的是这个通道。更改数据内容也走这个通道。
         if not event.is_directory:
 
             print("文件修改{0}".format(event.src_path))
