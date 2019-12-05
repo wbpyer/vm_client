@@ -90,7 +90,7 @@ if __name__ == '__main__':
     logging_format = logging.Formatter("%(asctime)s app:flask fun:%(funcName)s %(levelname)s %(message)s")
     handler.setFormatter(logging_format)
     app.logger.addHandler(handler)
-    app.run(host = '0.0.0.0',port=5001)
+    app.run(host = '0.0.0.0',port=5000)
 
 
 

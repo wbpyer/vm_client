@@ -137,7 +137,7 @@ def upload_fdfs(path:str):
     :return: 上传后FDFS返回的信息
     """
 
-    trackers = get_tracker_conf(r'C:\Users\Admin\Desktop\client.conf')
+    trackers = get_tracker_conf(r'C:\programdata\client.conf')
     client = Fdfs_client(trackers)
     ret = client.upload_by_filename(path)
     if ret.get('Status') == 'Upload successed.':
@@ -182,7 +182,7 @@ def download_fdfs(path):
     :return: 下载后FDFS返回的信息
     """
     PATH = 'C:\\Users\\Admin\\Desktop\\test\\test.zip' # 下到本机后变成什么。
-    trackers = get_tracker_conf(r'C:\Users\Admin\Desktop\client.conf')
+    trackers = get_tracker_conf(r'C:\programdata\client.conf')
     client = Fdfs_client(trackers)
     ret = client.download_to_file(PATH, path)
     return ret
@@ -227,7 +227,7 @@ def download_fdfs_file(path:str,name,work_id,date_id):
 
 
     dest = "C:\\Users\\Admin\\Desktop\\test\\{0}\\{1}\\收\\".format(work_id,date_id)+ name
-    trackers = get_tracker_conf(r'C:\Users\Admin\Desktop\client.conf')
+    trackers = get_tracker_conf(r'C:\programdata\client.conf')
     client = Fdfs_client(trackers)
     ret = client.download_to_file(dest, path)
     return ret
@@ -243,7 +243,7 @@ def connection(service:str):
     :param server:
     :return:
     """
-    main_list = ['http://127.0.0.1:5002/service/'+ service, 'http://127.0.0.1:5002/service/'+ service]
+    main_list = ['http://172.16.13.1:5001/service/'+ service, 'http://172.16.13.1:5001/service/'+ service]
 
     server = random.choice(main_list)
     resp = requests.get(server)

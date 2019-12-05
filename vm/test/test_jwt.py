@@ -12,8 +12,10 @@ import time
 #
 # print(token)
 
-# from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
-# s = Serializer('fdjsklafjkldsja', expires_in=60000)
+a = b'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6Ilx1OGZkMFx1N2VmNFx1NTQ5Nlx1NTU2MVx1NTQyNyIsInNpdGUiOiJodHRwczovL29wcy1jb2ZmZWUuY24ifQ.YA_cMfqLOSZm0jkhVxLoKYx7xzR8IFUla1bNa_riBmU'.decode()
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+s = Serializer('+)dno%=uwq*8rv4^u-^9-2s!gf=!wl_75iqqj56wyr&!s4yolg')
+
 # token = s.dumps({'leader_id': "3496",
 #                  'leader_name':'chen',
 #                  "leader_role":"安全员",
@@ -22,7 +24,8 @@ import time
 #                  "job_id":'0012',
 #                  "department_id":5,
 #                  "department":'安全管理部'}) # user为model中封装过的对象  最新最全，的需要的token 。
-#
+print(a)
+print(s.loads(a))
 # token = token.decode()
 # print(token)
 # d = {}
@@ -35,20 +38,20 @@ import time
 # dic = json.dumps(d)
 # print(dic)
 #
-B ={'id': 123,'name':'蒋工','role':"安全员"}
-# print(B.get('u'))
-
-c =  {"user_name":"bili",
-        'payload':{'leader_id': "3496",
-                 'leader_name':'chen',
-                 "leader_post":"安全员",
-                    "leader_job_id":'0371',
-                 'post':"安全员","post_id":6,
-                 "job_id":'0012',
-                 "department_id":5,
-                 "department":'安全管理部'},
-        "user_id":761,
-        }
-
-print(json.dumps(c))
+# B ={'id': 123,'name':'蒋工','role':"安全员"}
+# # print(B.get('u'))
+#
+# c =  {"user_name":"bili",
+#         'payload':{'leader_id': "3496",
+#                  'leader_name':'chen',
+#                  "leader_post":"安全员",
+#                     "leader_job_id":'0371',
+#                  'post':"安全员","post_id":6,
+#                  "job_id":'0012',
+#                  "department_id":5,
+#                  "department":'安全管理部'},
+#         "user_id":761,
+#         }
+#
+# print(json.dumps(c))
 
