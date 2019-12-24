@@ -2,13 +2,16 @@ import requests
 import json
 import time
 import shutil
+import socket
 import os
+from vm.vm_error import File_exists_error,File_upload_error,Timeout
 from vm.upload import upload_fdfs ,\
     upload_mydb,mk_meta_data,connection,download_fdfs,mk_meta_data_leader,mk_meta_data_zip,download_fdfs_file
 from vm.file_uilts import File_utils
 from watchdog.observers import Observer
 from vm.working import FileEventHandler
-
+from flask import current_app
+from vm.vm_error_backup import lastzip_add_redis
 
 
 
@@ -19,7 +22,9 @@ class Vmare():
     客户每次登陆虚拟机，必须带着token,里面是各种信息。 要用。从前端，发过来，我去解析，然后拿到数据，
     数据格式是json字典形式。
     """
-    PATH ='C:\\Users\\worker\\Desktop\\test'  # 工作区绝对路径地址
+    # PATH = 'C:\\Users\\worker\\Desktop\\我的文件'
+
+    PATH = 'C:\\Users\\admin\\Desktop\\我的办公桌'# 工作区绝对路径地址
 
 
 
@@ -38,7 +43,7 @@ class Vmare():
         self.db_name = str(self.user_id) + ":" + self.user_name + ":" + str(self.job_id) + ":" + self.role
 
         self.payload = payload
-        self.initpath = b'group1/M00/00/27/wKgdgV3Fg9mAU5ooAABCJiDT1GQ030.zip'  #初始化工作区，用户有，就用自己的，没有用这个空的。
+        self.initpath ='group1/M00/03/C1/rBANAV4B0QuAPQfVAAABylN4jIc348.zip'  #初始化工作区，用户有，就用自己的，没有用这个空的。
         self.filelist = []  # 用来存放更改过的文件。
         if all ([payload.get('leader_id'),payload.get('leader_name'),payload.get('leader_job_id'),payload.get('leader_role')]):
 
@@ -66,18 +71,22 @@ class Vmare():
         """
 
         try:
+
             os.mkdir(self.PATH)
             address,port= connection('db')
             # address = "127.0.0.1"
-            # port = 5000
+            # port = 5001
             d = {"user_id": self.user_id,"user_name":self.user_name}
             resp = requests.post("http://" + str(address) + ":" + str(port) + "/mysql/" + self.db_name + "/excel/find")
-
+            # print(resp)
             path = json.loads(resp.text)
+            # print(path)
 
             if path :
-                path = path.encode()
+                # path = path.encode()
+
                 download_fdfs(path)
+
                 File_utils.unzip()
                 resp = requests.post(
                     "http://" + str(address) + ":" + str(port) + "/mysql/" + self.db_name + "/excel/find/submit",
@@ -87,15 +96,21 @@ class Vmare():
                 if path:
                     for file in path:
                         name = file[0]
-                        filepath = file[1].encode()
-                        work_id = file[2]
-                        date_id = file[3]
-                        download_fdfs_file(filepath, name, work_id, date_id)
+                        filepath = file[1]
+                        # work_id = file[2]
+                        # date_id = file[3]
+                        # download_fdfs_file(filepath, name, work_id, date_id)
+                        download_fdfs_file(filepath, name)
                 else:
                     print("没有上报来的文件，继续工作")
             else:
-                download_fdfs(self.initpath)
-                File_utils.unzip()
+                try:
+
+                    download_fdfs(self.initpath)
+                    File_utils.unzip()
+                except Exception as e:
+                    print(e)
+
                 resp = requests.post(
                     "http://" + str(address) + ":" + str(port) + "/mysql/" + self.db_name + "/excel/find/submit",
                     json=d)
@@ -104,10 +119,11 @@ class Vmare():
                 if path:
                     for file in path:
                         name = file[0]
-                        filepath = file[1].encode()
-                        work_id = file[2]
-                        date_id = file[3]
-                        download_fdfs_file(filepath, name, work_id, date_id)
+                        filepath = file[1]
+                        # work_id = file[2]
+                        # date_id = file[3]
+                        # download_fdfs_file(filepath, name, work_id, date_id)
+                        download_fdfs_file(filepath, name)
                 else:
                     print("没有任何文件，已经系统初始化完成")
 
@@ -131,7 +147,7 @@ class Vmare():
             print(data)
 
             service = connection('db')
-            # service = ("127.0.0.1",5000)
+            # service = ("127.0.0.1",5001)
             resp = upload_mydb(data, *service,self.db_name,type)
             if resp.status_code == 200:
                 return 0
@@ -153,7 +169,7 @@ class Vmare():
             print(data)
 
             service = connection('db')
-            # service = ("127.0.0.1",5000)
+            # service = ("127.0.0.1",5001)
             resp = upload_mydb(data, *service,self.db_name,type)
             if resp.status_code == 200:
                 return 0
@@ -174,7 +190,7 @@ class Vmare():
             data = mk_meta_data(ret, self.payload,self.user_id,self.user_name)
 
             service = connection('db')
-            # service = ("127.0.0.1", 5000)
+            # service = ("127.0.0.1", 5001)
             resp = upload_mydb(data, *service, self.db_name,type='delete')
             if resp.status_code == 200:
                 return 0
@@ -185,13 +201,22 @@ class Vmare():
 
 
     def move_name(self,path):
+        """
+        对应改名的操作，如果用户对文件名做了更改，我们的程序会有怎样的反应。
+        :param path:
+        :return:
+        """
         dat = {}
-        dat["work"] = path.split('\\')[-4]
-        dat["date"] = path.split('\\')[-3]
+        # dat["work"] = path.split('\\')[-4]
+        # dat["date"] = path.split('\\')[-3]
         dat["status"] = path.split('\\')[-2]
         dat["filename"] = path.split('\\')[-1]
         dat["dbname"] = self.db_name
         address,port=connection('db')
+
+        # address = "127.0.0.1"
+        # port = 5001
+
         resp = requests.post("http://" + str(address) + ":" + str(port) + "/db"  + "/excel/movename",
                              json=dat)
 
@@ -212,7 +237,7 @@ class Vmare():
             data = mk_meta_data_leader(ret, self.payload,self.user_id,self.user_name)
 
             service = connection('db')
-            # service = ("127.0.0.1",5000)
+            # service = ("127.0.0.1",5001)
             resp = upload_mydb(data, *service, self.leader_db_name,type='leader')
             if resp.status_code == 200:
                 return 0
@@ -224,17 +249,22 @@ class Vmare():
 
 
 
+
     def working(self):
         """
         实时监控文件，替用户完成草报副拉的文件功能
         :return:
         """
+        os.system("start explorer C:\\Users\\admin\\Desktop\\我的办公桌")
+        # os.system("start explorer C:\\Users\\worker\\Desktop\\我的文件")
+
         observer = Observer()
         event_handler = FileEventHandler(self)
         observer.schedule(event_handler, self.PATH, recursive=True)
         observer.start()
 
         while self.WORK:
+
             print(self.WORK)
             time.sleep(2)
             # a = input("input:")
@@ -246,18 +276,32 @@ class Vmare():
 
 
 
+
+
+
+
+
+
     def exit(self):
         '''用户退出时，要做的工作。
         替用户保存好数据，两路，一个是单独，一个是打包'''
-        self.WORK = False
+        # self.WORK = False
+
+
+        zippath = File_utils.mk_package(self.PATH)
+        lastzip_add_redis(self.user_id, self.user_name, zippath)
+
+
 
         self.filelist = list(set(self.filelist))
         if self.filelist: # 空的就是没改过，就不用管了
             # files = File_utils.get_all_file() 之前是遍历所有，现在就不用了只去操作改动过的就行。
+            print(self.filelist)
             for file in self.filelist:
+
                 if os.path.exists(file):  #判断文件是否存在。
-                    if len(file.split('\\')) > 4 and file.split('\\')[-2] in ['草', '副','收']:
-                        #如果符合条件就开始上传到数据库端，数据库再去做比对。不符合条件，就不管。
+                    if  file.split('\\')[-2] in [ '我的办公桌','收','报']:
+                            #如果符合条件就开始上传到数据库端，数据库再去做比对。不符合条件，就不管。
                         try:
 
                             while self.upload_exit(file):
@@ -266,24 +310,72 @@ class Vmare():
 
                             print("file upload OK")
                         except Exception as e:
+                            print(e, "记录日志那个文件没有保存成功，程序可以继续运行。")
+                            raise File_upload_error(e)
 
-                            print(e,"记录日志那个文件没有保存成功，程序可以继续运行。")
-                        #记录日志，那个用户的那个文件没有上传成功。
+
+                            #记录日志，那个用户的那个文件没有上传成功。
+
+
+
+
+        while self.upload_zip(zippath,type='zip'):
+            print("失败继续")
+        print("zip upload OK")
+        os.remove(self.PATH+'.zip') # 上传完，清理掉
+
+
+        time.sleep(2)
+        # todo“给程序一些时间释放占用资源，然后再删除”
+        # shutil.rmtree(self.PATH)
+        # os.system("rd/s/q  C:\\Users\\worker\\Desktop\\我的文件")
+        os.system("rd/s/q  C:\\Users\\admin\\Desktop\\我的办公桌")
+
+
+        #todo 毕工可以实现镜像，就不用考虑这个文件残留问题。有错误就捕获启动处理程序就行
+        # if  not os.path.exists(self.PATH):
+
         try:
-            zippath = File_utils.mk_package(self.PATH)
-            while self.upload_zip(zippath,type='zip'):
-                print("失败继续")
-            print("zip upload OK")
-            os.remove(self.PATH+'.zip') # 上传完，清理掉
+            addrs = socket.getaddrinfo(socket.gethostname(), None)
+            data = {"ip": [item[4][0] for item in addrs if ':' not in item[4][0]][0]}
+            print(data)
 
+            requests.post('http://10.0.0.2:9999/endvm', json=data, timeout=2)
         except Exception as e:
+            raise Timeout(e)
+            # print("全部执行完毕，可以通知运维，机器继续使用。")
 
-            print(e,"放在redis中备份起来，不要让他崩掉，程序继续执行")
 
-        shutil.rmtree(self.PATH)
 
-        # 全部搞定，清理掉文件。
-        print("全部执行完毕，可以通知运维清屏,我可以用remove清理掉文件，")
+
+
+        # else:
+        #     print("有残留文件，通知运维检查机器，删除掉残留文件，不能给别人用这个。需要删除掉原有残留文件。")
+        #
+        #     current_app.logger.error(" def_exit: 用户退出，文件夹没有删除干净")
+        #     raise File_exists_error('有残留文件')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,7 +1,15 @@
 from fdfs_client.client import get_tracker_conf,Fdfs_client
+from vm.file_uilts import File_utils
 import requests
 import json
 import random
+import os
+
+
+TRCKER_CONF = 'C:\\Users\\Admin\\Desktop\\client0.conf' # FDFS配置文件
+# TRCKER_CONF = 'C:\\programdata\\client0.conf'
+
+
 
 
 
@@ -57,12 +65,12 @@ def mk_meta_data_leader(ret:dict,payload:dict,user_id,user_name) -> dict:
     # mysql_date['path'] = "http://" + ret.get("Storage IP").decode() + "/" + ret.get('Remote file_id').decode()  # 最终路径
     mysql_date['path'] = ret.get('Remote file_id').decode()
     mysql_date['file_ip'] = ret.get('Storage IP').decode()
-    status_id = file_name.split('\\')[-2]
-    date_id = file_name.split('\\')[-3]
-    work_id = file_name.split('\\')[-4]
+    status_id = file_name.split('\\')[-2] #草，报，收，垃
+    # date_id = file_name.split('\\')[-3]
+    # work_id = file_name.split('\\')[-4]
     mysql_date['status_id'] = status_id
-    mysql_date['date_id'] = date_id
-    mysql_date['work_id'] = work_id
+    # mysql_date['date_id'] = date_id
+    # mysql_date['work_id'] = work_id
     mysql_date['role'] = payload.get('role')
     mysql_date["role_id"] = payload.get('role_id')
 
@@ -97,11 +105,11 @@ def mk_meta_data(ret:dict,payload:dict,user_id,user_name) -> dict :
     mysql_date['path'] = ret.get('Remote file_id').decode()
     mysql_date['file_ip'] = ret.get('Storage IP').decode()
     status_id= file_name.split('\\')[-2]
-    date_id = file_name.split('\\')[-3]
-    work_id = file_name.split('\\')[-4]
+    # date_id = file_name.split('\\')[-3]
+    # work_id = file_name.split('\\')[-4]
     mysql_date['status_id'] = status_id
-    mysql_date['date_id'] = date_id
-    mysql_date['work_id'] = work_id
+    # mysql_date['date_id'] = date_id
+    # mysql_date['work_id'] = work_id
     mysql_date['department_id'] = payload.get('department_id') # 需要什么数据，去负载里面求出来即可。
     mysql_date['department'] = payload.get('department')
     mysql_date['role'] = payload.get('role')
@@ -110,7 +118,7 @@ def mk_meta_data(ret:dict,payload:dict,user_id,user_name) -> dict :
     mysql_date["user_id"] = user_id
     mysql_date["user_name"] = user_name
 
-
+                                                                                                                                                                                     
 
     # if status_id in ['草','报','副','垃']:
     #
@@ -130,6 +138,7 @@ def mk_meta_data(ret:dict,payload:dict,user_id,user_name) -> dict :
 
 
 
+
 def upload_fdfs(path:str):
     """
     #上传FDFS，api
@@ -137,7 +146,7 @@ def upload_fdfs(path:str):
     :return: 上传后FDFS返回的信息
     """
 
-    trackers = get_tracker_conf(r'C:\programdata\client.conf')
+    trackers = get_tracker_conf(TRCKER_CONF)
     client = Fdfs_client(trackers)
     ret = client.upload_by_filename(path)
     if ret.get('Status') == 'Upload successed.':
@@ -175,20 +184,27 @@ def upload_mydb(payload:dict,address,port,dbname:str,type):
 
 
 
+
 def download_fdfs(path):
     """
     #下载FDFS，api
     :param path:文件的下载路径
     :return: 下载后FDFS返回的信息
     """
-    PATH = 'C:\\Users\\Admin\\Desktop\\test\\test.zip' # 下到本机后变成什么。
-    trackers = get_tracker_conf(r'C:\programdata\client.conf')
-    client = Fdfs_client(trackers)
-    ret = client.download_to_file(PATH, path)
-    return ret
+
+    PATH = 'C:\\Users\\admin\\Desktop\\我的办公桌\\我的办公桌.zip'# 下到本机后变成什么。
+    # PATH = 'C:\\Users\\worker\\Desktop\\我的文件\\我的文件.zip'
+    fdfs_url = "http://172.16.13.1:8080/" + path
+    req = requests.get(fdfs_url)
+
+    with open(PATH, 'wb') as fobj:
+        fobj.write(req.content)
+        print("dowload over")
 
 
-def download_fdfs_file(path:str,name,work_id,date_id):
+
+# def download_fdfs_file(path:str,name,work_id,date_id):
+def download_fdfs_file(path:str,name):
     """
     下载别人上报的数据
     :param path:  下载路径
@@ -199,38 +215,47 @@ def download_fdfs_file(path:str,name,work_id,date_id):
     """
      # 下到本机后变成什么。
 
-    if date_id == 1:
-        date_id = "日"
-    elif date_id == 2:
-        date_id = "周"
-    elif date_id == 3:
-        date_id = "旬"
-    elif date_id == 4:
-        date_id = "月"
-    elif date_id == 5:
-        date_id = "季"
-    elif date_id == 6:
-        date_id = "半"
-    elif date_id == 7:
-        date_id = "年"
+    # if date_id == 1:
+    #     date_id = "日"
+    # elif date_id == 2:
+    #     date_id = "周"
+    # elif date_id == 3:
+    #     date_id = "旬"
+    # elif date_id == 4:
+    #     date_id = "月"
+    # elif date_id == 5:
+    #     date_id = "季"
+    # elif date_id == 6:
+    #     date_id = "半"
+    # elif date_id == 7:
+    #     date_id = "年"
+    #
+    #
+    #
+    # if work_id == 1:
+    #     work_id = "人"
+    # elif work_id == 2:
+    #     work_id = "机"
+    # elif work_id == 3:
+    #     work_id = "物"
+    # elif work_id == 4:
+    #     work_id = "法"
 
+    dest = "C:\\Users\\admin\\Desktop\\我的办公桌\\收\\" + name
+    # dest = "C:\\Users\\worker\\Desktop\\我的文件\\收\\" + name
+    # dest = "C:\\Users\\worker\\Desktop\\test\\{0}\\{1}\\收\\".format(work_id,date_id)+ name
+    if not os.path.exists(dest):
+        # todo 这里的逻辑就是，如果存在收的这个文件，就什么都不做，如果不在就下载，证明这个时新报送上来的，这里已经实线了，就这么办。
 
+        url = "http://172.16.13.1:8080/" + path
+        req = requests.get(url)
 
-    if work_id == 1:
-        work_id = "人"
-    elif work_id == 2:
-        work_id = "机"
-    elif work_id == 3:
-        work_id = "物"
-    elif work_id == 4:
-        work_id = "法"
+        with open(dest, 'wb') as fobj:
+            fobj.write(req.content)
+            print("dowload over")
 
+    return
 
-    dest = "C:\\Users\\Admin\\Desktop\\test\\{0}\\{1}\\收\\".format(work_id,date_id)+ name
-    trackers = get_tracker_conf(r'C:\programdata\client.conf')
-    client = Fdfs_client(trackers)
-    ret = client.download_to_file(dest, path)
-    return ret
 
 
 
@@ -262,5 +287,9 @@ def connection(service:str):
 
 if __name__ == "__main__":
     print(connection("db"))
+    # print(download_fdfs(b'group1/M00/00/00/rBANAV3pyB-AAhuPAAAD5ApngSo070.zip'))
+    # File_utils.unzip()
+
+
 
 

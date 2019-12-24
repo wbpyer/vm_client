@@ -16,6 +16,8 @@ a = b'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6Ilx1OGZkMFx1N2VmNFx1N
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 s = Serializer('+)dno%=uwq*8rv4^u-^9-2s!gf=!wl_75iqqj56wyr&!s4yolg')
 
+
+
 # token = s.dumps({'leader_id': "3496",
 #                  'leader_name':'chen',
 #                  "leader_role":"安全员",

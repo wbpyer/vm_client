@@ -55,16 +55,16 @@ class FileEventHandler(FileSystemEventHandler):
                         print("file upload leader OK")
 
 
-                        file_name = event.src_path.split('\\')[-1]
-
-                        src = event.src_path.replace("报", "副")
-                        dest = src.split('\\')[:-1]
-                        des = ""
-                        for i in dest:
-                            des = des + i + "\\"
-                        dest = des + file_name
-
-                        shutil.move(event.src_path, dest)  #再放到自己的副本
+                        # file_name = event.src_path.split('\\')[-1]
+                        #
+                        # src = event.src_path.replace("报", "副")
+                        # dest = src.split('\\')[:-1]
+                        # des = ""
+                        # for i in dest:
+                        #     des = des + i + "\\"
+                        # dest = des + "(副本)" + file_name
+                        #
+                        # shutil.move(event.src_path, dest)  #再放到自己的副本
 
 
 
@@ -104,6 +104,7 @@ class FileEventHandler(FileSystemEventHandler):
     #         print("都会触发")
 
 
+
 if __name__ == "__main__":
     #测试用例,只是测试用
     observer = Observer()
@@ -127,6 +128,9 @@ if __name__ == "__main__":
 
     observer.stop()
     observer.join()
+
+
+
 
 
 

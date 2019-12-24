@@ -5,13 +5,13 @@
 from fdfs_client.client import *
 # # # #fdfs 潘森测试,目前删除好使，上传好使，下载
 # # #
-trackers = get_tracker_conf(r'C:\Users\Admin\Desktop\client.conf')
+trackers = get_tracker_conf(r'C:\Users\Admin\Desktop\client0.conf')
 client = Fdfs_client(trackers)
-ret = client.upload_by_filename('C:\\Users\\Admin\\Desktop\\1125.txt')
+ret = client.upload_by_filename('C:\\Users\\Admin\\Desktop\\我的办公桌.zip')
 # d = b'group1/M00/00/0D/wKgdgV3AiEmAfHc9AAAAAAAAAAA210.txt'#传入这个就可以。
 # print(client.get_meta_data(d))
 # print(client.list_all_groups())
-#
+
 # # d.find(b'/')
 #
 # ret = client.append_by_filename('C:\\Users\\Admin\\Desktop\\new1.txt',d)  #这个方法不行。运转不起来。
@@ -19,14 +19,16 @@ ret = client.upload_by_filename('C:\\Users\\Admin\\Desktop\\1125.txt')
 
 #删成功了没事，如果没有这个文件，就会报错，所以这里得捕获异常。
 
-
-#
-# ret = client.download_to_file('C:\\Users\\Admin\\Desktop\\12345888',d)  #下载功能已经实现
+# d=b'group1/M00/00/2B/wKgdgV3N5kyAIPPQAACwRAMKux4579.zip'
+# #
+# ret = client.download_to_file('C:\\Users\\Admin\\Desktop\\0000.zip',d)  #下载功能已经实现
 print(ret)
 
+# print(ret.get('Storage IP').decode())
 
+# ret.get('Remote file_id')
 
-import re
+# import re
 # d2 = 'C:\\Users\\Admin\\Desktop\\是的撒范德萨珠海发桥'
 # d1='C:\\Users\\Admin\\Desktop\\是的撒范德萨342ABDGS878****珠海发桥123'
 # d = 'D:\\test\\人\\日\\报\\新建文本文档.txt'
@@ -85,5 +87,6 @@ import os
 #
 
 
+#{'Group name': b'group1', 'Remote file_id': b'group1/M00/00/2B/wKgdgV3NarKAQsFrAAAFspsWmss63.conf', 'Status': 'Upload successed.', 'Local file name': 'C:\\Users\\Admin\\Desktop\\client.conf', 'Uploaded size': '1.42KB', 'Storage IP': b'192.168.29.129'}
 
 

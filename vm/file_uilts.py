@@ -61,7 +61,7 @@ class File_utils():
 
 
     @classmethod
-    def unzip(cls,path = 'C:\\Users\\Admin\\Desktop\\test\\'):
+    def unzip(cls,path = 'C:\\Users\\admin\\Desktop\\我的办公桌\\'):
         """
         zip解包裹
         :param path: 工作去路径
@@ -71,7 +71,7 @@ class File_utils():
 
         for file_name in file_list:
             # print(file_name)
-            if os.path.splitext(file_name)[-2] == 'test':
+            if os.path.splitext(file_name)[-2] == '我的办公桌':
                 print(file_name)
 
                 file_zip = zipfile.ZipFile(path + file_name, 'r')
@@ -84,5 +84,9 @@ class File_utils():
 
 
 if __name__ == '__main__':
-    # File_utils.mk_package("D:\\test")
+    # File_utils.unzip()
+    File_utils.mk_package('C:\\Users\\Admin\\Desktop\\我的办公桌')
     print("ok")
+
+
+
