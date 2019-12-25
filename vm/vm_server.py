@@ -2,8 +2,9 @@ import logging
 from flask import Flask,request,jsonify
 from vm.vm_main import Vmare
 from flask_cors import CORS
-from vm.vm_error import File_exists_error,Timeout
+from vm.vm_error import Timeout
 import requests
+import socket
 
 
 
@@ -20,7 +21,7 @@ def vm_exit():
     :return:
     """
     app.logger.error("bi_come_in_exit_now_remote_ip: %s user_agent: %s ", request.remote_addr, request.user_agent.browser)
-    # todo 这里我的思路是这样的，如果超过10秒没有返回值，就启动错误处理程序，毕工再等待11秒的时候，直接干掉。
+
 
 
     try:
@@ -29,6 +30,8 @@ def vm_exit():
         app.logger.error("退出程序已经启动")
         Vmare._instance.exit()
         print(Vmare._instance)
+
+
         return "exit is OK", 200
 
 
@@ -45,11 +48,24 @@ def vm_exit():
 
 
     except Exception as e:
-        print(e)
-        app.logger.error("error_msg: %s remote_ip: %s user_agent: %s ",e,request.remote_addr,request.user_agent.browser)
-        # todo 启动Redis还原程序 还原程序待开发,以后可以在开发，目前先不考虑，不急。
 
-        return "exit is fail", 404
+        print(e)
+
+        app.logger.error("error_msg: %s remote_ip: %s user_agent: %s ",e,request.remote_addr,request.user_agent.browser)
+        # todo 启动Redis还原程序 还原程序待开发,以后可以在开发，目前先不考虑，不急。证明没用通知到毕工，再次请求毕工
+
+        print('先启动还原，然后再次请求毕工')
+
+        addrs = socket.getaddrinfo(socket.gethostname(), None)
+        data = {"ip": [item[4][0] for item in addrs if ':' not in item[4][0]][0]}
+        print(data)
+
+        resp = requests.post('http://10.0.0.2:9999/endvm', json=data)
+        #没有返回时间，这里就不会报错。
+        print(resp.text)
+
+
+        return "file is fail,but i had conn bi_exit ", 409
         #需要毕工调度起来我的错误处理程序。
 
 
@@ -130,12 +146,14 @@ def vm_health():
 
 if __name__ == '__main__':
     print(app.url_map)
-    handler = logging.FileHandler('C:\\logs\\vm_server', encoding='UTF-8')
+    handler = logging.FileHandler('C:\\logs\\vmnew.txt', encoding='UTF-8')
     handler.setLevel(logging.DEBUG)
     logging_format = logging.Formatter("%(asctime)s app:flask fun:%(funcName)s %(levelname)s %(message)s")
     handler.setFormatter(logging_format)
     app.logger.addHandler(handler)
     app.run(host = '0.0.0.0',port=5000)
+
+
 
 
 

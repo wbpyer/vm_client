@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['vm_server.py'],
-             pathex=['vm_error_backup.py', 'working.py', 'file_uilts.py', 'upload.py', 'vm_main.py', 'E:\\vm_new111\\vm'],
+             pathex=['file_uilts.py', 'upload.py', 'vm_error.py', 'vm_error_backup.py', 'vm_main.py', 'working.py', 'E:\\vm_new111\\vm'],
              binaries=[],
              datas=[],
              hiddenimports=[],

@@ -1,17 +1,18 @@
 import requests
 import json
 import time
-import shutil
+# import shutil
 import socket
 import os
-from vm.vm_error import File_exists_error,File_upload_error,Timeout
+from vm.vm_error import File_upload_error,Timeout
 from vm.upload import upload_fdfs ,\
     upload_mydb,mk_meta_data,connection,download_fdfs,mk_meta_data_leader,mk_meta_data_zip,download_fdfs_file
 from vm.file_uilts import File_utils
 from watchdog.observers import Observer
 from vm.working import FileEventHandler
-from flask import current_app
-from vm.vm_error_backup import lastzip_add_redis
+# from flask import current_app
+from vm.vm_error_backup import lastzip_add_redis,foo
+from win32gui import EnumWindows
 
 
 
@@ -22,7 +23,7 @@ class Vmare():
     客户每次登陆虚拟机，必须带着token,里面是各种信息。 要用。从前端，发过来，我去解析，然后拿到数据，
     数据格式是json字典形式。
     """
-    # PATH = 'C:\\Users\\worker\\Desktop\\我的文件'
+    # PATH = 'C:\\Users\\worker\\Desktop\\我的办公桌'
 
     PATH = 'C:\\Users\\admin\\Desktop\\我的办公桌'# 工作区绝对路径地址
 
@@ -73,9 +74,9 @@ class Vmare():
         try:
 
             os.mkdir(self.PATH)
-            address,port= connection('db')
-            # address = "127.0.0.1"
-            # port = 5001
+            # address,port= connection('db')
+            address = "172.16.13.1"
+            port = 5002
             d = {"user_id": self.user_id,"user_name":self.user_name}
             resp = requests.post("http://" + str(address) + ":" + str(port) + "/mysql/" + self.db_name + "/excel/find")
             # print(resp)
@@ -146,8 +147,8 @@ class Vmare():
             data = mk_meta_data(ret,self.payload,self.user_id,self.user_name)
             print(data)
 
-            service = connection('db')
-            # service = ("127.0.0.1",5001)
+            # service = connection('db')
+            service = ("172.16.13.1",5002)
             resp = upload_mydb(data, *service,self.db_name,type)
             if resp.status_code == 200:
                 return 0
@@ -168,8 +169,9 @@ class Vmare():
             data = mk_meta_data_zip(ret,self.payload,self.user_id,self.user_name)
             print(data)
 
-            service = connection('db')
+            # service = connection('db')
             # service = ("127.0.0.1",5001)
+            service = ("172.16.13.1", 5002)
             resp = upload_mydb(data, *service,self.db_name,type)
             if resp.status_code == 200:
                 return 0
@@ -189,8 +191,9 @@ class Vmare():
         if ret:
             data = mk_meta_data(ret, self.payload,self.user_id,self.user_name)
 
-            service = connection('db')
+            # service = connection('db')
             # service = ("127.0.0.1", 5001)
+            service = ("172.16.13.1", 5002)
             resp = upload_mydb(data, *service, self.db_name,type='delete')
             if resp.status_code == 200:
                 return 0
@@ -212,10 +215,10 @@ class Vmare():
         dat["status"] = path.split('\\')[-2]
         dat["filename"] = path.split('\\')[-1]
         dat["dbname"] = self.db_name
-        address,port=connection('db')
+        # address,port=connection('db')
 
-        # address = "127.0.0.1"
-        # port = 5001
+        address = "172.16.13.1"
+        port = 5002
 
         resp = requests.post("http://" + str(address) + ":" + str(port) + "/db"  + "/excel/movename",
                              json=dat)
@@ -236,8 +239,9 @@ class Vmare():
         if ret:
             data = mk_meta_data_leader(ret, self.payload,self.user_id,self.user_name)
 
-            service = connection('db')
+            # service = connection('db')
             # service = ("127.0.0.1",5001)
+            service = ("172.16.13.1",5002)
             resp = upload_mydb(data, *service, self.leader_db_name,type='leader')
             if resp.status_code == 200:
                 return 0
@@ -256,7 +260,7 @@ class Vmare():
         :return:
         """
         os.system("start explorer C:\\Users\\admin\\Desktop\\我的办公桌")
-        # os.system("start explorer C:\\Users\\worker\\Desktop\\我的文件")
+        # os.system("start explorer C:\\Users\\worker\\Desktop\\我的办公桌")
 
         observer = Observer()
         event_handler = FileEventHandler(self)
@@ -286,6 +290,14 @@ class Vmare():
         '''用户退出时，要做的工作。
         替用户保存好数据，两路，一个是单独，一个是打包'''
         # self.WORK = False
+
+
+        #首先关闭所有占用的窗口，特别是文件
+
+
+        EnumWindows(foo, 0)
+
+
 
 
         zippath = File_utils.mk_package(self.PATH)
@@ -319,6 +331,12 @@ class Vmare():
 
 
 
+
+
+
+
+
+
         while self.upload_zip(zippath,type='zip'):
             print("失败继续")
         print("zip upload OK")
@@ -328,8 +346,9 @@ class Vmare():
         time.sleep(2)
         # todo“给程序一些时间释放占用资源，然后再删除”
         # shutil.rmtree(self.PATH)
-        # os.system("rd/s/q  C:\\Users\\worker\\Desktop\\我的文件")
-        os.system("rd/s/q  C:\\Users\\admin\\Desktop\\我的办公桌")
+        # todo  如果这里毕工是直接恢复镜像的话，就不用删除了，让毕工直接恢复就行,下面这部可以省略
+        # os.system("rd/s/q  C:\\Users\\worker\\Desktop\\我的办公桌")
+        # os.system("rd/s/q  C:\\Users\\admin\\Desktop\\我的办公桌")
 
 
         #todo 毕工可以实现镜像，就不用考虑这个文件残留问题。有错误就捕获启动处理程序就行

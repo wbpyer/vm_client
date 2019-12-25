@@ -193,7 +193,7 @@ def download_fdfs(path):
     """
 
     PATH = 'C:\\Users\\admin\\Desktop\\我的办公桌\\我的办公桌.zip'# 下到本机后变成什么。
-    # PATH = 'C:\\Users\\worker\\Desktop\\我的文件\\我的文件.zip'
+    # PATH = 'C:\\Users\\worker\\Desktop\\我的办公桌\\我的办公桌.zip'
     fdfs_url = "http://172.16.13.1:8080/" + path
     req = requests.get(fdfs_url)
 
@@ -242,7 +242,7 @@ def download_fdfs_file(path:str,name):
     #     work_id = "法"
 
     dest = "C:\\Users\\admin\\Desktop\\我的办公桌\\收\\" + name
-    # dest = "C:\\Users\\worker\\Desktop\\我的文件\\收\\" + name
+    # dest = "C:\\Users\\worker\\Desktop\\我的办公桌\\收\\" + name
     # dest = "C:\\Users\\worker\\Desktop\\test\\{0}\\{1}\\收\\".format(work_id,date_id)+ name
     if not os.path.exists(dest):
         # todo 这里的逻辑就是，如果存在收的这个文件，就什么都不做，如果不在就下载，证明这个时新报送上来的，这里已经实线了，就这么办。
