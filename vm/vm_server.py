@@ -2,9 +2,8 @@ import logging
 from flask import Flask,request,jsonify
 from vm.vm_main import Vmare
 from flask_cors import CORS
-from vm.vm_error import Timeout
 import requests
-import socket
+
 
 
 
@@ -36,8 +35,9 @@ def vm_exit():
 
 
 
-    except Timeout as e:
-        return "exit is OK", 200
+    except Exception as e:
+        app.logger.error("退出程序发生错误 s% ",e)
+        return "exit exception", 409
 
 
 
@@ -47,26 +47,26 @@ def vm_exit():
     #     return "need human help clean dir", 405
 
 
-    except Exception as e:
-
-        print(e)
-
-        app.logger.error("error_msg: %s remote_ip: %s user_agent: %s ",e,request.remote_addr,request.user_agent.browser)
-        # todo 启动Redis还原程序 还原程序待开发,以后可以在开发，目前先不考虑，不急。证明没用通知到毕工，再次请求毕工
-
-        print('先启动还原，然后再次请求毕工')
-
-        addrs = socket.getaddrinfo(socket.gethostname(), None)
-        data = {"ip": [item[4][0] for item in addrs if ':' not in item[4][0]][0]}
-        print(data)
-
-        resp = requests.post('http://10.0.0.2:9999/endvm', json=data)
-        #没有返回时间，这里就不会报错。
-        print(resp.text)
-
-
-        return "file is fail,but i had conn bi_exit ", 409
-        #需要毕工调度起来我的错误处理程序。
+    # except Exception as e:
+    #
+    #     print(e)
+    #
+    #     app.logger.error("error_msg: %s remote_ip: %s user_agent: %s ",e,request.remote_addr,request.user_agent.browser)
+    #     # todo 启动Redis还原程序 还原程序待开发,以后可以在开发，目前先不考虑，不急。证明没用通知到毕工，再次请求毕工
+    #
+    #     print('先启动还原，然后再次请求毕工')
+    #
+    #     addrs = socket.getaddrinfo(socket.gethostname(), None)
+    #     data = {"ip": [item[4][0] for item in addrs if ':' not in item[4][0]][0]}
+    #     print(data)
+    #
+    #     resp = requests.post('http://10.0.0.2:9999/endvm', json=data)
+    #     #没有返回时间，这里就不会报错。
+    #     print(resp.text)
+    #
+    #
+    #     return "file is fail,but i had conn bi_exit ", 409
+    #     #需要毕工调度起来我的错误处理程序。
 
 
 
@@ -77,9 +77,17 @@ def vm_working():
 
     try:
 
-        Vmare._instance.start()
+        # Vmare._instance.start()
 
         Vmare._instance.working()
+
+
+
+
+
+
+
+
         # 单元测试2成功   接下来需要配合数据库，开发数据库端  联合数据库测试成功
             #等待用户退出虚拟机时，调用下面这个，这个信号，应该是运维给的，中间用户会有工作的时间。
             # 上面会阻塞主，用户一直在虚拟机上工作。直到由运维将请求发送给，退出接口，才会执行下面的工作。
@@ -123,7 +131,8 @@ def vm_start():
     try:
         requests.get("http://127.0.0.1:5000/vm/work",timeout=1)
     except Exception as e:
-        print(e)
+        print("我自己起了文件监控程序".format(e))
+
 
     return 'ok'
 
@@ -152,6 +161,10 @@ if __name__ == '__main__':
     handler.setFormatter(logging_format)
     app.logger.addHandler(handler)
     app.run(host = '0.0.0.0',port=5000)
+
+
+
+
 
 
 

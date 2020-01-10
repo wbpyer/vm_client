@@ -3,6 +3,7 @@ import time
 import shutil
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from vm.vm_error import change_filename
 
 """watchdog文件监控体系"""
 
@@ -48,9 +49,8 @@ class FileEventHandler(FileSystemEventHandler):
 
                     try:
 
-                        while self.vm.upload_leader(event.src_path):  #先放到领导里面
-                            time.sleep(3)
-                            print("报送失败，继续报送")
+                        newpath = change_filename(event.src_path) # 报送之前给文件名字加时间戳，目前只加了报
+                        self.vm.upload_leader(newpath) #先放到领导里面
 
                         print("file upload leader OK")
 
@@ -76,8 +76,8 @@ class FileEventHandler(FileSystemEventHandler):
 
                 try :
 
-                    while self.vm.upload_garbage(event.src_path):
-                        print("失败继续上传")
+                    self.vm.upload_garbage(event.src_path)
+                    print("失败继续上传")
                     os.remove(event.src_path)
                 except Exception as e:
                     print("需要删除文件没有上报成功{}".format(e))

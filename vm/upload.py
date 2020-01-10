@@ -6,8 +6,8 @@ import random
 import os
 
 
-TRCKER_CONF = 'C:\\Users\\Admin\\Desktop\\client0.conf' # FDFS配置文件
-# TRCKER_CONF = 'C:\\programdata\\client0.conf'
+# TRCKER_CONF = 'C:\\Users\\Admin\\Desktop\\client0.conf' # FDFS配置文件
+TRCKER_CONF = 'C:\\programdata\\client0.conf'
 
 
 
@@ -105,6 +105,7 @@ def mk_meta_data(ret:dict,payload:dict,user_id,user_name) -> dict :
     mysql_date['path'] = ret.get('Remote file_id').decode()
     mysql_date['file_ip'] = ret.get('Storage IP').decode()
     status_id= file_name.split('\\')[-2]
+    del_id = file_name.split('\\')[-3]
     # date_id = file_name.split('\\')[-3]
     # work_id = file_name.split('\\')[-4]
     mysql_date['status_id'] = status_id
@@ -114,7 +115,7 @@ def mk_meta_data(ret:dict,payload:dict,user_id,user_name) -> dict :
     mysql_date['department'] = payload.get('department')
     mysql_date['role'] = payload.get('role')
     mysql_date["role_id"] = payload.get('role_id')
-
+    mysql_date["del_id"] = del_id
     mysql_date["user_id"] = user_id
     mysql_date["user_name"] = user_name
 
@@ -192,8 +193,8 @@ def download_fdfs(path):
     :return: 下载后FDFS返回的信息
     """
 
-    PATH = 'C:\\Users\\admin\\Desktop\\我的办公桌\\我的办公桌.zip'# 下到本机后变成什么。
-    # PATH = 'C:\\Users\\worker\\Desktop\\我的办公桌\\我的办公桌.zip'
+    # PATH = 'C:\\Users\\admin\\Desktop\\我的办公桌\\我的办公桌.zip'# 下到本机后变成什么。
+    PATH = 'C:\\Users\\worker\\Desktop\\我的办公桌\\我的办公桌.zip'
     fdfs_url = "http://172.16.13.1:8080/" + path
     req = requests.get(fdfs_url)
 
@@ -241,8 +242,8 @@ def download_fdfs_file(path:str,name):
     # elif work_id == 4:
     #     work_id = "法"
 
-    dest = "C:\\Users\\admin\\Desktop\\我的办公桌\\收\\" + name
-    # dest = "C:\\Users\\worker\\Desktop\\我的办公桌\\收\\" + name
+    # dest = "C:\\Users\\admin\\Desktop\\我的办公桌\\收\\" + name
+    dest = "C:\\Users\\worker\\Desktop\\我的办公桌\\收\\" + name
     # dest = "C:\\Users\\worker\\Desktop\\test\\{0}\\{1}\\收\\".format(work_id,date_id)+ name
     if not os.path.exists(dest):
         # todo 这里的逻辑就是，如果存在收的这个文件，就什么都不做，如果不在就下载，证明这个时新报送上来的，这里已经实线了，就这么办。

@@ -4,16 +4,19 @@ import time
 # import shutil
 import socket
 import os
+import re
+import redis
+from threading import Thread
 from vm.vm_error import File_upload_error,Timeout
 from vm.upload import upload_fdfs ,\
     upload_mydb,mk_meta_data,connection,download_fdfs,mk_meta_data_leader,mk_meta_data_zip,download_fdfs_file
 from vm.file_uilts import File_utils
 from watchdog.observers import Observer
 from vm.working import FileEventHandler
-# from flask import current_app
+from flask import current_app
 from vm.vm_error_backup import lastzip_add_redis,foo
 from win32gui import EnumWindows
-
+from vm.vm_error_backup import sumbit_redis_list
 
 
 
@@ -23,9 +26,9 @@ class Vmare():
     客户每次登陆虚拟机，必须带着token,里面是各种信息。 要用。从前端，发过来，我去解析，然后拿到数据，
     数据格式是json字典形式。
     """
-    # PATH = 'C:\\Users\\worker\\Desktop\\我的办公桌'
+    PATH = 'C:\\Users\\worker\\Desktop\\我的办公桌'
 
-    PATH = 'C:\\Users\\admin\\Desktop\\我的办公桌'# 工作区绝对路径地址
+    # PATH = 'C:\\Users\\admin\\Desktop\\我的办公桌'# 工作区绝对路径地址
 
 
 
@@ -43,13 +46,34 @@ class Vmare():
         self.user_name = user_name
         self.db_name = str(self.user_id) + ":" + self.user_name + ":" + str(self.job_id) + ":" + self.role
 
+
         self.payload = payload
+        self.db1 = redis.Redis('172.16.13.1', 6379, 5)
         self.initpath ='group1/M00/03/C1/rBANAV4B0QuAPQfVAAABylN4jIc348.zip'  #初始化工作区，用户有，就用自己的，没有用这个空的。
         self.filelist = []  # 用来存放更改过的文件。
-        if all ([payload.get('leader_id'),payload.get('leader_name'),payload.get('leader_job_id'),payload.get('leader_role')]):
 
-            self.leader_db_name = str(payload.get("leader_id")) + ":"+ payload.get('leader_name')+\
-                                  ":" + str(payload.get('leader_job_id')) + ":"+ str(payload.get('leader_role')) #拼出领导的库名
+
+
+        self.lead_name = payload.get('leader_name')  # 变成了一个列表，下面3个都是
+
+        self.lead_id = payload.get('leader_id')
+
+        self.lead_role = payload.get('leader_role')
+
+        self.lead_job_id = payload.get('leader_job_id')
+        self.leader_db_name = []
+
+        if self.lead_id:
+            for i in range(len(self.lead_id)):
+                self.leader_db_name.append(str(self.lead_id[i]) + ":" + str(self.lead_name[i])
+                                           + ":" + str(self.lead_job_id[i]) +":"+ str(self.lead_role[i]))
+
+
+
+        # if all ([payload.get('leader_id'),payload.get('leader_name'),payload.get('leader_job_id'),payload.get('leader_role')]):
+        #
+        #     self.leader_db_name = str(payload.get("leader_id")) + ":"+ payload.get('leader_name')+\
+        #                           ":" + str(payload.get('leader_job_id')) + ":"+ str(payload.get('leader_role')) #拼出领导的库名
 
         else:
             self.leader_db_name = None
@@ -235,23 +259,48 @@ class Vmare():
         :return:
         """
         ret = upload_fdfs(file)
-        print(ret)
+
+
         if ret:
+            sumbit_redis_list(self.lead_role,ret)
+
+            print(ret)
             data = mk_meta_data_leader(ret, self.payload,self.user_id,self.user_name)
 
             # service = connection('db')
             # service = ("127.0.0.1",5001)
             service = ("172.16.13.1",5002)
-            resp = upload_mydb(data, *service, self.leader_db_name,type='leader')
-            if resp.status_code == 200:
-                return 0
-            else:
-                return 1
-        else:
+            for i in self.leader_db_name:
+                resp = upload_mydb(data, *service, i,type='leader')
+
             return 1
 
 
 
+
+    def _3389(self,ip):
+
+
+
+        # print(ip)
+        current_app.logger.error("监控ip")
+        output = os.popen("netstat -ano | findstr {0}:3389".format(ip))
+        a = str(output.read())
+        print(a)
+        current_app.logger.error("监控ip")
+        if a:
+            ab = re.compile('ESTABLISHED')
+            lis = re.findall(ab, a)
+            print(lis)
+            if  not lis:
+                self.WORK = False
+
+
+        else:
+            print("挂断")
+            self.WORK = False
+
+        # time.sleep(3)
 
 
     def working(self):
@@ -259,16 +308,40 @@ class Vmare():
         实时监控文件，替用户完成草报副拉的文件功能
         :return:
         """
-        os.system("start explorer C:\\Users\\admin\\Desktop\\我的办公桌")
-        # os.system("start explorer C:\\Users\\worker\\Desktop\\我的办公桌")
+        # os.system("start explorer C:\\Users\\admin\\Desktop\\我的办公桌")
+        os.system("start explorer C:\\Users\\worker\\Desktop\\我的办公桌")
 
         observer = Observer()
         event_handler = FileEventHandler(self)
         observer.schedule(event_handler, self.PATH, recursive=True)
         observer.start()
+        addrs = socket.getaddrinfo(socket.gethostname(), None)
+        ip = [item[4][0] for item in addrs if ':' not in item[4][0]][0]
+        # t =  Thread(target=self._3389,args=(ip,))
+        # t.start()
 
         while self.WORK:
+            # d = {"user_id": self.user_id, "user_name": self.user_name}
+            # 找报送上来的文件放到收里，存在就不放，不存在就放。
 
+            current_app.logger.error("我在循环中不断寻找redis")
+            # path = self.db1.hget(self.role,"path")
+            #
+            # name = self.db1.hget(self.role,"name")
+            print(self.role)
+            teps = self.db1.rpop(self.role)
+
+            print(11111111,teps)
+            if teps:
+                tepl = teps.decode().split(",")
+
+                path = tepl[0]
+                name = tepl[1]
+
+
+                download_fdfs_file(path,name)
+
+            # self._3389(ip)
             print(self.WORK)
             time.sleep(2)
             # a = input("input:")
@@ -277,11 +350,7 @@ class Vmare():
 
         observer.stop()
         observer.join()
-
-
-
-
-
+        # self.exit()
 
 
 
@@ -291,12 +360,14 @@ class Vmare():
         替用户保存好数据，两路，一个是单独，一个是打包'''
         # self.WORK = False
 
-
+        current_app.logger.error("启动退出程序satart")
         #首先关闭所有占用的窗口，特别是文件
 
+        try:
 
-        EnumWindows(foo, 0)
-
+            EnumWindows(foo, 0)
+        except Exception as e:
+            print(e)
 
 
 
@@ -316,9 +387,9 @@ class Vmare():
                             #如果符合条件就开始上传到数据库端，数据库再去做比对。不符合条件，就不管。
                         try:
 
-                            while self.upload_exit(file):
-                                time.sleep(2)
-                                print("失败继续")
+                            self.upload_exit(file)
+                            # time.sleep(2)
+                            # print("失败继续")
 
                             print("file upload OK")
                         except Exception as e:
@@ -330,20 +401,13 @@ class Vmare():
 
 
 
+        self.upload_zip(zippath,type='zip')
 
-
-
-
-
-
-
-        while self.upload_zip(zippath,type='zip'):
-            print("失败继续")
         print("zip upload OK")
         os.remove(self.PATH+'.zip') # 上传完，清理掉
 
 
-        time.sleep(2)
+        # time.sleep(2)
         # todo“给程序一些时间释放占用资源，然后再删除”
         # shutil.rmtree(self.PATH)
         # todo  如果这里毕工是直接恢复镜像的话，就不用删除了，让毕工直接恢复就行,下面这部可以省略
@@ -355,14 +419,16 @@ class Vmare():
         # if  not os.path.exists(self.PATH):
 
         try:
-            addrs = socket.getaddrinfo(socket.gethostname(), None)
-            data = {"ip": [item[4][0] for item in addrs if ':' not in item[4][0]][0]}
-            print(data)
-
-            requests.post('http://10.0.0.2:9999/endvm', json=data, timeout=2)
+            data = {'role':self.role}
+            resp = requests.post("http://172.16.13.1:5001/vm/status",json = data)
+            print(resp.text)
         except Exception as e:
-            raise Timeout(e)
-            # print("全部执行完毕，可以通知运维，机器继续使用。")
+            print(e)
+
+
+
+
+
 
 
 

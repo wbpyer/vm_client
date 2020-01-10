@@ -100,40 +100,86 @@ from win32gui import IsWindow,IsWindowEnabled,IsWindowVisible,GetWindowText,Enum
 
 
 
-def foo(hwnd, mouse):
-    titles = set()
-    # 判断是不是窗口、是不是可用的、是不是可见的
-    if IsWindow(hwnd) and IsWindowEnabled(hwnd) and IsWindowVisible(hwnd):
-        # 把得到的结果赋值给a
-        a = win32gui.GetWindowText(hwnd)
-        # 打出
-        print(win32gui.GetWindowText(hwnd))
-        # 不为空时
-        if a != '':
-            # 当'Program Manager'不在a内时：
-            if 'Program Manager' not in a:
-                if '开始' not in a:
-                    if '管理员' not in a:
-                        # 关闭窗口
-                        win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
-                        # 最小化窗口
-                        # win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
-        # 把所有的窗口添加到titles集内
-
-        titles.add(GetWindowText(hwnd))
-        # lt = [t for t in titles if t]
-        # lt.sort()
-        # for t in lt:
-        #     print(t)
-
-    # 将软件窗口置于最前
+# def foo(hwnd, mouse):
+#     titles = set()
+#     # 判断是不是窗口、是不是可用的、是不是可见的
+#     if IsWindow(hwnd) and IsWindowEnabled(hwnd) and IsWindowVisible(hwnd):
+#         # 把得到的结果赋值给a
+#         a = win32gui.GetWindowText(hwnd)
+#         # 打出
+#         print(win32gui.GetWindowText(hwnd))
+#         # 不为空时
+#         if a != '':
+#             # 当'Program Manager'不在a内时：
+#             if 'Program Manager' not in a:
+#                 if '开始' not in a:
+#                     if '管理员' not in a:
+#                         # 关闭窗口
+#                         win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+#                         # 最小化窗口
+#                         # win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+#         # 把所有的窗口添加到titles集内
+#
+#         titles.add(GetWindowText(hwnd))
+#         # lt = [t for t in titles if t]
+#         # lt.sort()
+#         # for t in lt:
+#         #     print(t)
+#
+#     # 将软件窗口置于最前
 
 
 # win32gui.SetForegroundWindow(hwnd)
+#
+# if __name__ == '__main__':
+#     # 枚举所有窗体，同时调用foo函数
+#     EnumWindows(foo, 0)
+#
 
-if __name__ == '__main__':
-    # 枚举所有窗体，同时调用foo函数
-    EnumWindows(foo, 0)
+
+# a = '\u5f53\u524d\u65e0\u7a7a\u95f2\u5de5\u4f5c\u53f0'.encode().decode()
+# print(a)
 
 
 
+
+
+payload={"leader_0": {"leader":"36",
+                      "id":"12"},
+
+		# "leader_1": "job",
+		# "leader_2": "安全管理员",
+		# "leader_3": "5",
+		"role": "安全员",
+		"role_id": "1",
+		"job_id": "4",
+		"department_id": "14",
+		"department": "人力"
+ }
+
+#
+#
+#
+#
+# l = [k  for k in payload.keys()]
+#
+# print(l)
+# for i in range(len(l)-5):
+#     print(payload.get("leader_{}".format(i)))
+# import re
+#
+# r = re.compile('\d+')
+# for k,v in payload.items():
+#      if re.findall(r,k):
+#          = payload.get(k)
+l = [1,2,3]
+c = [4,5,7]
+ll = len(c)
+if l:
+    for i in range(ll):
+
+        print(i)
+
+# if self.lead_id:
+#     for i in len(self.lead_id):
+#         self.lead_id[i] + ":" + self.lead_name[i] + ":" + self.lead_job_id[i] + ":" + self.lead_role[i]
