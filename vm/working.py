@@ -72,7 +72,25 @@ class FileEventHandler(FileSystemEventHandler):
                         print ("报送文件没有上报成功{0}".format(e))
                         print("存入redis做备份")
 
-            if event.src_path.split('\\')[-2] == '垃':
+            if self.vm.lower_db_name:
+
+                if event.src_path.split('\\')[-2] == '发':
+                    #只有报里的才会管，其他不管，
+
+                    try:
+
+                        newpath = change_filename(event.src_path) # 报送之前给文件名字加时间戳，目前是发的文件
+                        self.vm.upload_lower(newpath) #先放到下级里面。
+
+                        print("file upload leader OK")
+
+                    except Exception as e:
+                        print ("报送文件没有上报成功{0}".format(e))
+                        print("存入redis做备份")
+
+
+
+            if event.src_path.split('\\')[-2] == '回收站':
 
                 try :
 

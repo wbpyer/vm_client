@@ -5,8 +5,10 @@ from win32.lib import win32con
 from win32gui import IsWindow,IsWindowEnabled,IsWindowVisible,GetWindowText
 
 
+
 db = redis.Redis('172.16.13.1',6379,1)  # 这是给数据丢失整包恢复用的
 db1 = redis.Redis('172.16.13.1',6379,5)  # 这是在收文件时候，快速循环时候用的。去里面查找，有没有别人报送上来的文件。
+db2 = redis.Redis('172.16.13.1',6379,6) # 查找有没有人发过来的文件
 
 
 
@@ -31,14 +33,33 @@ def sumbit_redis(leader_role,ret):
         db1.hset(name=leader_role[i],key='name',value=file_name)
 
 
+def sumbit_redis_lower(lower_role,ret):
+
+    """
+    下发文件的时候存入redis中
+    :param lower_role:
+    :param ret:
+    :return:
+    """
+    path = ret.get('Remote file_id')
+    file_name = ret.get('Local file name')
+
+    file_name = file_name.split('\\')[-1]
+    print(1111111111111111111, file_name)
+    print(1111111111111111111, path)
+
+    # k = str(l_user_id) + ":" + l_user_name
+    value = path.decode() + "," + file_name
+    print(value)
+    for i in range(len(lower_role)):
+        db2.lpush(str(lower_role[i]), value)
 
 
 def sumbit_redis_list(leader_role,ret):
     """
     向redis提交报送文件，要上报的文件，。利用list
-    :param user_id:
-    :param user_name:
-    :param file:
+    :param leader_role:
+    :param ret:
     :return:
     """
 

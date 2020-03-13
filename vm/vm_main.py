@@ -9,14 +9,15 @@ import redis
 from threading import Thread
 from vm.vm_error import File_upload_error,Timeout
 from vm.upload import upload_fdfs ,\
-    upload_mydb,mk_meta_data,connection,download_fdfs,mk_meta_data_leader,mk_meta_data_zip,download_fdfs_file
+    upload_mydb,mk_meta_data,connection,download_fdfs,mk_meta_data_leader,mk_meta_data_zip,download_fdfs_file,mk_meta_data_lower
 from vm.file_uilts import File_utils
 from watchdog.observers import Observer
 from vm.working import FileEventHandler
 from flask import current_app
 from vm.vm_error_backup import lastzip_add_redis,foo
 from win32gui import EnumWindows
-from vm.vm_error_backup import sumbit_redis_list
+from vm.vm_error_backup import sumbit_redis_list,sumbit_redis_lower
+
 
 
 
@@ -28,7 +29,8 @@ class Vmare():
     """
     PATH = 'C:\\Users\\worker\\Desktop\\我的办公桌'
 
-    # PATH = 'C:\\Users\\admin\\Desktop\\我的办公桌'# 工作区绝对路径地址
+    # PATH = 'C:\\Users\\admin\\Desktop\\我的办公桌'
+    #  工作区绝对路径地址
 
 
 
@@ -48,7 +50,8 @@ class Vmare():
 
 
         self.payload = payload
-        self.db1 = redis.Redis('172.16.13.1', 6379, 5)
+        self.db1 = redis.Redis('172.16.13.1', 6379, 5) # 报
+        self.db2 = redis.Redis('172.16.13.1', 6379, 6) # 发
         self.initpath ='group1/M00/03/C1/rBANAV4B0QuAPQfVAAABylN4jIc348.zip'  #初始化工作区，用户有，就用自己的，没有用这个空的。
         self.filelist = []  # 用来存放更改过的文件。
 
@@ -63,12 +66,16 @@ class Vmare():
         self.lead_job_id = payload.get('leader_job_id')
         self.leader_db_name = []
 
+        self.lower_name = payload.get("lower_name")
+        self.lower_id = payload.get("lower_id")
+        self.lower_job_id = payload.get("lower_job_id")
+        self.lower_role = payload.get("lower_role")
+        self.lower_db_name = []
+
         if self.lead_id:
             for i in range(len(self.lead_id)):
                 self.leader_db_name.append(str(self.lead_id[i]) + ":" + str(self.lead_name[i])
                                            + ":" + str(self.lead_job_id[i]) +":"+ str(self.lead_role[i]))
-
-
 
         # if all ([payload.get('leader_id'),payload.get('leader_name'),payload.get('leader_job_id'),payload.get('leader_role')]):
         #
@@ -77,6 +84,17 @@ class Vmare():
 
         else:
             self.leader_db_name = None
+
+
+
+        if self.lower_id:
+            for i in range(len(self.lower_id)):
+                self.lower_db_name.append(str(self.lower_id[i]) + ":" + str(self.lower_name[i])
+                                           + ":" + str(self.lower_job_id[i]) +":"+ str(self.lower_role[i]))
+
+        else:
+            self.lower_db_name = None
+
 
         self.WORK = True       #用来控制工作区监控的开闭
 
@@ -249,7 +267,28 @@ class Vmare():
 
         return resp.status_code
 
+    def upload_lower(self,file):
+        """
+        下发文件，进入下面人的数据库里面管起来
 
+        :param file:
+        :return:
+        """
+        ret = upload_fdfs(file)
+
+        if ret:
+            sumbit_redis_lower(self.lower_role, ret)
+
+            print(ret)
+            data = mk_meta_data_lower(ret, self.payload, self.user_id, self.user_name)
+
+            # service = connection('db')
+            # service = ("127.0.0.1",5001)
+            service = ("172.16.13.1", 5002)
+            for i in self.lower_db_name:
+                resp = upload_mydb(data, *service, i, type='lower')
+
+            return 1
 
 
     def upload_leader(self,file):
@@ -309,7 +348,9 @@ class Vmare():
         :return:
         """
         # os.system("start explorer C:\\Users\\admin\\Desktop\\我的办公桌")
+
         os.system("start explorer C:\\Users\\worker\\Desktop\\我的办公桌")
+        # todo 这里还要根据不同的权限，弹出不同的页面。这里目前好实现，一会直接一并改写出来得了。先空着，这里还没有具体落地。
 
         observer = Observer()
         event_handler = FileEventHandler(self)
@@ -330,8 +371,12 @@ class Vmare():
             # name = self.db1.hget(self.role,"name")
             print(self.role)
             teps = self.db1.rpop(self.role)
+            fa = self.db2.rpop(self.role)
 
-            print(11111111,teps)
+
+            print(11111111,teps,222222,fa)
+
+
             if teps:
                 tepl = teps.decode().split(",")
 
@@ -340,6 +385,15 @@ class Vmare():
 
 
                 download_fdfs_file(path,name)
+
+            if fa:
+                fal = fa.decode().split(",")
+
+                path = fal[0]
+                name = fal[1]
+
+                download_fdfs_file(path, name)
+
 
             # self._3389(ip)
             print(self.WORK)
@@ -383,7 +437,7 @@ class Vmare():
             for file in self.filelist:
 
                 if os.path.exists(file):  #判断文件是否存在。
-                    if  file.split('\\')[-2] in [ '我的办公桌','收','报']:
+                    if  file.split('\\')[-2] in [ '我的办公桌','收','报',"发"]:
                             #如果符合条件就开始上传到数据库端，数据库再去做比对。不符合条件，就不管。
                         try:
 
@@ -415,9 +469,10 @@ class Vmare():
         # os.system("rd/s/q  C:\\Users\\admin\\Desktop\\我的办公桌")
 
 
+
         #todo 毕工可以实现镜像，就不用考虑这个文件残留问题。有错误就捕获启动处理程序就行
         # if  not os.path.exists(self.PATH):
-
+        # 这段代码是用来更改状态的，虚拟机状态。
         try:
             data = {'role':self.role}
             resp = requests.post("http://172.16.13.1:5001/vm/status",json = data)

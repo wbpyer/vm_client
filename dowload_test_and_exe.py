@@ -16,9 +16,9 @@
 #     download(url)
 
 
-# pyinstaller -F -i t.ico -w vm_main.py -p wm_server -p autod -p data -p page -p page
 
 
+#pyinstaller -F -i 333.ico -c vm_server.py -p file_uilts.py -p upload.py -p vm_error.py -p vm_error_backup.py -p vm_main.py -p working.py
 
 
 
