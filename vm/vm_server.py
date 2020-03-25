@@ -111,10 +111,11 @@ def vm_start():
 
 
     data = request.json
+    templater = data.get('templater')   # 点击不同的功能，切换不同的模板。
     user_name = data.get('user_name')
     user_id = data.get('user_id')
     payload = data.get('payload')
-    vm = Vmare(payload, user_id, user_name)
+    vm = Vmare(payload, user_id, user_name,templater)
     print(vm.payload)
     app.logger.error(" dbname: %s remote_ip: %s user_agent: %s ", vm.db_name, request.remote_addr,
                      request.user_agent.browser)

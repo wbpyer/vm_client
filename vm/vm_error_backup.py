@@ -1,5 +1,5 @@
 import redis
-import win32gui
+import win32gui,win32api
 from vm.upload import upload_fdfs
 from win32.lib import win32con
 from win32gui import IsWindow,IsWindowEnabled,IsWindowVisible,GetWindowText
@@ -95,6 +95,30 @@ def lastzip_add_redis(user_id,user_name,file):
     k =  str(user_id)+":"+ user_name
     if db.set(k,path):
         return True
+
+
+def setWallPaper(pic_num):
+    """
+    照片地址，更换虚拟机地址，每一个号码，对应一个壁纸。暂未启用
+    :param pic:
+    :return:
+    """
+    #成功利用这段代码，就可以给虚拟机换皮，这里应该是根据，对方的角色来换皮的。
+    # open register
+    pic = " "
+    if pic_num == 1:
+        pic = 'C:\\programdata\\001.jpg'
+    elif pic_num == 2:
+        pic = 'C:\\programdata\\002.jpg'
+    elif pic_num == 3:
+        pic = 'C:\\programdata\\003.jpg'
+
+    regKey = win32api.RegOpenKeyEx(win32con.HKEY_CURRENT_USER, "Control Panel\\Desktop", 0, win32con.KEY_SET_VALUE)
+    win32api.RegSetValueEx(regKey, "WallpaperStyle", 0, win32con.REG_SZ, "2")
+    win32api.RegSetValueEx(regKey, "TileWallpaper", 0, win32con.REG_SZ, "0")
+    # refresh screen
+    win32gui.SystemParametersInfo(win32con.SPI_SETDESKWALLPAPER, pic, win32con.SPIF_SENDWININICHANGE)
+
 
 
 def foo(hwnd, mouse):

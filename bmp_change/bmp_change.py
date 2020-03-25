@@ -1,6 +1,6 @@
 import win32api,win32con,win32gui
 
-
+"""测试虚拟机自动换壁纸"""
 print(u'正在设置图片:%s为桌面壁纸...')
 key = win32api.RegOpenKeyEx(win32con.HKEY_CURRENT_USER,
     "Control Panel\\Desktop",0,win32con.KEY_SET_VALUE)

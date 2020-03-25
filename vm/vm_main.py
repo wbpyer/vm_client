@@ -16,7 +16,7 @@ from vm.working import FileEventHandler
 from flask import current_app
 from vm.vm_error_backup import lastzip_add_redis,foo
 from win32gui import EnumWindows
-from vm.vm_error_backup import sumbit_redis_list,sumbit_redis_lower
+from vm.vm_error_backup import sumbit_redis_list,sumbit_redis_lower,setWallPaper
 
 
 
@@ -46,6 +46,14 @@ class Vmare():
         self.user_id = user_id
         self.job_id = payload.get('job_id')
         self.user_name = user_name
+
+
+        #这里的话，如果传入的参数发生了改变，我自己写的中端需要改变，前端要改，前端要多传入参数，到了中端验证一下
+        #中端转发到虚拟机上。目前中台和前端没有这个字段，所以暂时注释掉，
+
+        # self.templ = templater  #模板的编号，用来区分切换虚拟机的页面。暂未启用，可以为空，
+
+
         self.db_name = str(self.user_id) + ":" + self.user_name + ":" + str(self.job_id) + ":" + self.role
 
 
@@ -347,8 +355,25 @@ class Vmare():
         实时监控文件，替用户完成草报副拉的文件功能
         :return:
         """
-        # os.system("start explorer C:\\Users\\admin\\Desktop\\我的办公桌")
 
+
+        #下面的代码是控制桌面壁纸的切换 ，增加了壁纸切换的功能 ，暂时没有启用这个功能，所以注销掉了
+        #根据不同的编号，设置不同的壁纸，这个编号是前端点击时候传过来的，需要，这里可以留着以后，云调度的时候
+        #可以每个人分不同的模板时候用，1到16个模板，点击哪个，前端传回来哪个，就下载哪个模板。当然前端也可以不
+        #传，留一个空的字段。
+
+
+        # if self.templ:
+        #     判断前端传回来的模板，调取不同的壁纸，和模板。
+        #     if self.templ == 1:
+        #         setWallPaper(1)
+        #     elif self.templ ==2:
+        #         setWallPaper(2)
+        #     elif self.templ ==3:
+        #         setWallPaper(3)
+
+
+        # os.system("start explorer C:\\Users\\admin\\Desktop\\我的办公桌")
         os.system("start explorer C:\\Users\\worker\\Desktop\\我的办公桌")
         # todo 这里还要根据不同的权限，弹出不同的页面。这里目前好实现，一会直接一并改写出来得了。先空着，这里还没有具体落地。
 
