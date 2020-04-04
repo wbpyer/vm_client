@@ -7,7 +7,7 @@ import os
 import re
 import redis
 from threading import Thread
-from vm.vm_error import File_upload_error,Timeout
+from vm.vm_error import File_upload_error,mysql_conn
 from vm.upload import upload_fdfs ,\
     upload_mydb,mk_meta_data,connection,download_fdfs,mk_meta_data_leader,mk_meta_data_zip,download_fdfs_file,mk_meta_data_lower
 from vm.file_uilts import File_utils
@@ -42,48 +42,52 @@ class Vmare():
 
     def __init__(self,payload:dict,user_id,user_name) :
         '''接到用户后，需要去做的工作。解析负载过来的数据,需要什么数据，就去字典里面拿'''
-        self.role = payload.get('role')
+        self.role = payload.get('role')  #这个里面现在就是业务, 一次只能一个业务
         self.user_id = user_id
         self.job_id = payload.get('job_id')
         self.user_name = user_name
+        # self.business = payload.get('business')  没有业务字段
 
-
+        self.department= payload.get('department') #部门也是这一个
+        self.level =  payload.get("level")  # company ,group ,project   todo 调度端也要加上。
         #这里的话，如果传入的参数发生了改变，我自己写的中端需要改变，前端要改，前端要多传入参数，到了中端验证一下
         #中端转发到虚拟机上。目前中台和前端没有这个字段，所以暂时注释掉，
 
         # self.templ = templater  #模板的编号，用来区分切换虚拟机的页面。暂未启用，可以为空，
 
-
-        self.db_name = str(self.user_id) + ":" + self.user_name + ":" + str(self.job_id) + ":" + self.role
+        #这里换成了部门
+        self.db_name = str(self.user_id) + ":" + self.user_name + ":" + str(self.job_id) + ":" + self.department
 
 
         self.payload = payload
         self.db1 = redis.Redis('172.16.13.1', 6379, 5) # 报
         self.db2 = redis.Redis('172.16.13.1', 6379, 6) # 发
-        self.initpath ='group1/M00/03/C1/rBANAV4B0QuAPQfVAAABylN4jIc348.zip'  #初始化工作区，用户有，就用自己的，没有用这个空的。
+        # self.initpath ='group1/M00/03/C1/rBANAV4B0QuAPQfVAAABylN4jIc348.zip'  #初始化工作区，用户有，就用自己的，没有用这个空的。
         self.filelist = []  # 用来存放更改过的文件。
 
 
 
         self.lead_name = payload.get('leader_name')  # 变成了一个列表，下面3个都是
 
-        self.lead_id = payload.get('leader_id')
+        self.lead_id = payload.get('leader_id')   # 列表
 
-        self.lead_role = payload.get('leader_role')
+        self.lead_role = payload.get('leader_role')  # 列表这个字段没啥用,仍然保留但是不用
 
-        self.lead_job_id = payload.get('leader_job_id')
+        self.lead_job_id = payload.get('leader_job_id')     #列表
+
         self.leader_db_name = []
 
         self.lower_name = payload.get("lower_name")
         self.lower_id = payload.get("lower_id")
         self.lower_job_id = payload.get("lower_job_id")
-        self.lower_role = payload.get("lower_role")
+        self.lower_role = payload.get("lower_role")   # 列表这个字段没啥用,仍然保留但是不用
+
         self.lower_db_name = []
 
         if self.lead_id:
             for i in range(len(self.lead_id)):
                 self.leader_db_name.append(str(self.lead_id[i]) + ":" + str(self.lead_name[i])
-                                           + ":" + str(self.lead_job_id[i]) +":"+ str(self.lead_role[i]))
+                                           + ":" + str(self.lead_job_id[i]) +":"+ str(self.department))
 
         # if all ([payload.get('leader_id'),payload.get('leader_name'),payload.get('leader_job_id'),payload.get('leader_role')]):
         #
@@ -98,7 +102,7 @@ class Vmare():
         if self.lower_id:
             for i in range(len(self.lower_id)):
                 self.lower_db_name.append(str(self.lower_id[i]) + ":" + str(self.lower_name[i])
-                                           + ":" + str(self.lower_job_id[i]) +":"+ str(self.lower_role[i]))
+                                           + ":" + str(self.lower_job_id[i]) +":"+ str(self.department))
 
         else:
             self.lower_db_name = None
@@ -117,18 +121,25 @@ class Vmare():
         然后解压 ,如果下不到，证明客户没有数据。那就让他继续工作就行。这里不能让程序崩溃掉。
         下载时候要考虑两点，一个是自己的最后一次文件包，而是有没有别人给报送上来的表，要去查出来
         放到自己的草里面。相对应的人机无法，日周月年，都需要放到草里面。做两方面考虑。
+        3.25这个接口要重启，逻辑是根据业务查自己的库有没有数据，如果有就下载，如果没有
+        就去模板库里面下载，先不考虑，调岗的问题。
         :param :
         :return:
         """
 
         try:
+            # todo 判断一下，路径在不在，如果有就再次清理，因为是注销之后第一次登录，是可以清理的。
+            if os.path.exists(self.PATH):
+                os.system("rd/s/q  C:\\Users\\worker\\Desktop\\我的办公桌")
+                # os.system("rd/s/q  C:\\Users\\Admin\\Desktop\\我的办公桌")
 
             os.mkdir(self.PATH)
             # address,port= connection('db')
             address = "172.16.13.1"
             port = 5002
-            d = {"user_id": self.user_id,"user_name":self.user_name}
-            resp = requests.post("http://" + str(address) + ":" + str(port) + "/mysql/" + self.db_name + "/excel/find")
+            d = {"role":self.role}
+            resp = requests.post("http://" + str(address) + ":" + str(port) + "/mysql/" + self.db_name + "/excel/find",json=d)
+            #查询有无该业务，最后一次的登录文件。如果有，就下载。
             # print(resp)
             path = json.loads(resp.text)
             # print(path)
@@ -136,53 +147,65 @@ class Vmare():
             if path :
                 # path = path.encode()
 
+                #下载，解压，
                 download_fdfs(path)
 
-                File_utils.unzip()
-                resp = requests.post(
-                    "http://" + str(address) + ":" + str(port) + "/mysql/" + self.db_name + "/excel/find/submit",
-                    json=d)
 
-                path = json.loads(resp.text)
-                if path:
-                    for file in path:
-                        name = file[0]
-                        filepath = file[1]
-                        # work_id = file[2]
-                        # date_id = file[3]
-                        # download_fdfs_file(filepath, name, work_id, date_id)
-                        download_fdfs_file(filepath, name)
-                else:
-                    print("没有上报来的文件，继续工作")
+                File_utils.unzip()
+
+                #这里的逻辑是，查找下级给上级报送的文件，目前这里不用了，因为已经改成了实时报送，redis.
+                #所以这个接口没有什么用。
+                # resp = requests.post(
+                #     "http://" + str(address) + ":" + str(port) + "/mysql/" + self.db_name + "/excel/find/submit",
+                #     json=d)
+                #
+                # path = json.loads(resp.text)
+                # if path:
+                #     for file in path:
+                #         name = file[0]
+                #         filepath = file[1]
+                #         # work_id = file[2]
+                #         # date_id = file[3]
+                #         # download_fdfs_file(filepath, name, work_id, date_id)
+                #         download_fdfs_file(filepath, name)
+                # else:
+                #     print("没有上报来的文件，继续工作")
             else:
+                #如果没有，就下载初始化的业务模板，这里建一张mysql吧，把mysql,
                 try:
+                    # todo 去表里面查，然后拿到向应业务的初始化模板，这里有个步骤拿到表，连接数据库
+                    self.initpath = mysql_conn(self.role,self.department,self.level)
 
                     download_fdfs(self.initpath)
                     File_utils.unzip()
                 except Exception as e:
                     print(e)
 
-                resp = requests.post(
-                    "http://" + str(address) + ":" + str(port) + "/mysql/" + self.db_name + "/excel/find/submit",
-                    json=d)
 
-                path = json.loads(resp.text)
-                if path:
-                    for file in path:
-                        name = file[0]
-                        filepath = file[1]
-                        # work_id = file[2]
-                        # date_id = file[3]
-                        # download_fdfs_file(filepath, name, work_id, date_id)
-                        download_fdfs_file(filepath, name)
-                else:
-                    print("没有任何文件，已经系统初始化完成")
+
+                #已经改成实时报送了， 所以不需要，下载了，redis里面把这个事情就干了。
+                # resp = requests.post(
+                #     "http://" + str(address) + ":" + str(port) + "/mysql/" + self.db_name + "/excel/find/submit",
+                #     json=d)
+                #
+                # path = json.loads(resp.text)
+                # if path:
+                #     for file in path:
+                #         name = file[0]
+                #         filepath = file[1]
+                #         # work_id = file[2]
+                #         # date_id = file[3]
+                #         # download_fdfs_file(filepath, name, work_id, date_id)
+                #         download_fdfs_file(filepath, name)
+                # else:
+                #     print("没有任何文件，已经系统初始化完成")
 
 
         except Exception as e:
             print("我是start，我有问题:{0}".format(e))
 
 
+# todo 4.2暂时更新到这里.明天继续
 
     def upload_exit(self,file,type=None):
         """
@@ -285,7 +308,8 @@ class Vmare():
         ret = upload_fdfs(file)
 
         if ret:
-            sumbit_redis_lower(self.lower_role, ret)
+            lower = [i + ":" + self.role for i in self.lower_db_name]
+            sumbit_redis_lower(lower, ret)
 
             print(ret)
             data = mk_meta_data_lower(ret, self.payload, self.user_id, self.user_name)
@@ -309,10 +333,11 @@ class Vmare():
 
 
         if ret:
-            sumbit_redis_list(self.lead_role,ret)
+            leader = [i +":"+ self.role for i in self.leader_db_name]  # 在原有基础加上业务去标识出来这个字段.
+            sumbit_redis_list(leader,ret)
 
             print(ret)
-            data = mk_meta_data_leader(ret, self.payload,self.user_id,self.user_name)
+            data = mk_meta_data_leader(ret, self.payload,self.user_id,self.user_name)   #这里没改,就是业务字段便了
 
             # service = connection('db')
             # service = ("127.0.0.1",5001)
@@ -373,7 +398,7 @@ class Vmare():
         #         setWallPaper(3)
 
 
-        # os.system("start explorer C:\\Users\\admin\\Desktop\\我的办公桌")
+        # os.system("start explorer C:\\Users\\Admin\\Desktop\\我的办公桌")
         os.system("start explorer C:\\Users\\worker\\Desktop\\我的办公桌")
         # todo 这里还要根据不同的权限，弹出不同的页面。这里目前好实现，一会直接一并改写出来得了。先空着，这里还没有具体落地。
 
@@ -394,9 +419,10 @@ class Vmare():
             # path = self.db1.hget(self.role,"path")
             #
             # name = self.db1.hget(self.role,"name")
-            print(self.role)
-            teps = self.db1.rpop(self.role)
-            fa = self.db2.rpop(self.role)
+            myredis = self.db_name + ":" + self.role
+            #todo 这里不用动,但是实际上role里面不再是岗位,而是变成了别的东西,或者说暂时先不动.
+            teps = self.db1.rpop(myredis)
+            fa = self.db2.rpop(myredis)
 
 
             print(11111111,teps,222222,fa)
@@ -439,19 +465,19 @@ class Vmare():
         替用户保存好数据，两路，一个是单独，一个是打包'''
         # self.WORK = False
 
-        current_app.logger.error("启动退出程序satart")
+        current_app.logger.error("启动退出程序,开始退出")
         #首先关闭所有占用的窗口，特别是文件
 
-        try:
-
-            EnumWindows(foo, 0)
-        except Exception as e:
-            print(e)
+        # try:
+        #
+        #     EnumWindows(foo, 0)
+        # except Exception as e:
+        #     print(e)
 
 
 
         zippath = File_utils.mk_package(self.PATH)
-        lastzip_add_redis(self.user_id, self.user_name, zippath)
+        lastzip_add_redis(self.user_id, self.user_name, zippath)  #打包后第一时间记录redis,防止丢失,这是重点.
 
 
 
@@ -463,6 +489,7 @@ class Vmare():
 
                 if os.path.exists(file):  #判断文件是否存在。
                     if  file.split('\\')[-2] in [ '我的办公桌','收','报',"发"]:
+                        # 注意发送,也是发到对方的收里面
                             #如果符合条件就开始上传到数据库端，数据库再去做比对。不符合条件，就不管。
                         try:
 
@@ -490,8 +517,9 @@ class Vmare():
         # todo“给程序一些时间释放占用资源，然后再删除”
         # shutil.rmtree(self.PATH)
         # todo  如果这里毕工是直接恢复镜像的话，就不用删除了，让毕工直接恢复就行,下面这部可以省略
-        # os.system("rd/s/q  C:\\Users\\worker\\Desktop\\我的办公桌")
-        # os.system("rd/s/q  C:\\Users\\admin\\Desktop\\我的办公桌")
+        os.system("rd/s/q  C:\\Users\\worker\\Desktop\\我的办公桌")
+        #
+        # os.system("rd/s/q  C:\\Users\\Admin\\Desktop\\我的办公桌")
 
 
 
@@ -499,15 +527,20 @@ class Vmare():
         # if  not os.path.exists(self.PATH):
         # 这段代码是用来更改状态的，虚拟机状态。
         try:
-            data = {'role':self.role}
+            addrs = socket.getaddrinfo(socket.gethostname(), None)
+            ip = [item[4][0] for item in addrs if ':' not in item[4][0]][0]
+            data = {'ip':ip}
+            #这里还需要拿到ip,去关闭对应的ip
             resp = requests.post("http://172.16.13.1:5001/vm/status",json = data)
             print(resp.text)
         except Exception as e:
             print(e)
 
 
+        #todo 然后注销一下，然后就不用管了。可以每次登录的时候可以再删一次。
 
-
+        # os.system("shutdown -c")
+        #我的程序死了也没事，毕工会吊起来我
 
 
 

@@ -69,7 +69,7 @@ def mk_meta_data_lower(ret:dict,payload:dict,user_id,user_name) -> dict:
     mysql_date['status_id'] = status_id
     # mysql_date['date_id'] = date_id
     # mysql_date['work_id'] = work_id
-    mysql_date['role'] = payload.get('role')
+    mysql_date['role'] = payload.get('role')  # 里面变成了业务,但是其他不变.
     mysql_date["role_id"] = payload.get('role_id')
 
     mysql_date["user_id"] = user_id
@@ -104,7 +104,7 @@ def mk_meta_data_leader(ret:dict,payload:dict,user_id,user_name) -> dict:
     mysql_date['status_id'] = status_id
     # mysql_date['date_id'] = date_id
     # mysql_date['work_id'] = work_id
-    mysql_date['role'] = payload.get('role')
+    mysql_date['role'] = payload.get('role')  #这里面成了业务
     mysql_date["role_id"] = payload.get('role_id')
 
     mysql_date["user_id"] = user_id
@@ -231,7 +231,7 @@ def download_fdfs(path):
     :return: 下载后FDFS返回的信息
     """
 
-    # PATH = 'C:\\Users\\admin\\Desktop\\我的办公桌\\我的办公桌.zip'# 下到本机后变成什么。
+    # PATH = 'C:\\Users\\admin\\Desktop\\我的办公桌\\我的办公桌.zip'    # 下到本机后变成什么。
     PATH = 'C:\\Users\\worker\\Desktop\\我的办公桌\\我的办公桌.zip'
     fdfs_url = "http://172.16.13.1:8080/" + path
     req = requests.get(fdfs_url)

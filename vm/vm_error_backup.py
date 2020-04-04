@@ -33,11 +33,11 @@ def sumbit_redis(leader_role,ret):
         db1.hset(name=leader_role[i],key='name',value=file_name)
 
 
-def sumbit_redis_lower(lower_role,ret):
+def sumbit_redis_lower(lower:list,ret):
 
     """
     下发文件的时候存入redis中
-    :param lower_role:
+    :param lower: list
     :param ret:
     :return:
     """
@@ -51,14 +51,14 @@ def sumbit_redis_lower(lower_role,ret):
     # k = str(l_user_id) + ":" + l_user_name
     value = path.decode() + "," + file_name
     print(value)
-    for i in range(len(lower_role)):
-        db2.lpush(str(lower_role[i]), value)
+    for i in range(len(lower)):
+        db2.lpush(str(lower[i]), value)
 
 
-def sumbit_redis_list(leader_role,ret):
+def sumbit_redis_list(leader,ret):
     """
     向redis提交报送文件，要上报的文件，。利用list
-    :param leader_role:
+    :param leader:list
     :param ret:
     :return:
     """
@@ -74,8 +74,8 @@ def sumbit_redis_list(leader_role,ret):
     # k = str(l_user_id) + ":" + l_user_name
     value = path.decode()+","+file_name
     print(value)
-    for i in range(len(leader_role)):
-        db1.lpush(str(leader_role[i]),value)
+    for i in range(len(leader)):
+        db1.lpush(str(leader[i]),value)
 
 
 

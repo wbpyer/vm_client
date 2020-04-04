@@ -77,7 +77,7 @@ def vm_working():
 
     try:
 
-        # Vmare._instance.start()
+        Vmare._instance.start()
 
         Vmare._instance.working()
 
@@ -108,14 +108,12 @@ def vm_start():
     :return:
     """
 
-
-
     data = request.json
-    templater = data.get('templater')   # 点击不同的功能，切换不同的模板。
+    # templater = data.get('templater')   # 点击不同的功能，切换不同的模板。
     user_name = data.get('user_name')
     user_id = data.get('user_id')
     payload = data.get('payload')
-    vm = Vmare(payload, user_id, user_name,templater)
+    vm = Vmare(payload, user_id, user_name)
     print(vm.payload)
     app.logger.error(" dbname: %s remote_ip: %s user_agent: %s ", vm.db_name, request.remote_addr,
                      request.user_agent.browser)
@@ -124,10 +122,14 @@ def vm_start():
                      request.user_agent.browser)
     print(vm.leader_db_name)
 
+    #如过这是领导要看，就走这个逻辑，一个单独的逻辑，这里面的模块交给了王倩。
+
     try:
         requests.get("http://127.0.0.1:5000/vm/work",timeout=1)
     except Exception as e:
         print("我自己起了文件监控程序".format(e))
+
+
 
 
     return 'ok'
