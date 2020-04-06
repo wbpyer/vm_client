@@ -6,9 +6,9 @@ from win32gui import IsWindow,IsWindowEnabled,IsWindowVisible,GetWindowText
 
 
 
-db = redis.Redis('172.16.13.1',6379,1)  # 这是给数据丢失整包恢复用的
-db1 = redis.Redis('172.16.13.1',6379,5)  # 这是在收文件时候，快速循环时候用的。去里面查找，有没有别人报送上来的文件。
-db2 = redis.Redis('172.16.13.1',6379,6) # 查找有没有人发过来的文件
+db = redis.Redis('172.16.240.1',6379,1)  # 这是给数据丢失整包恢复用的
+db1 = redis.Redis('172.16.240.1',6379,5)  # 这是在收文件时候，快速循环时候用的。去里面查找，有没有别人报送上来的文件。
+db2 = redis.Redis('172.16.240.1',6379,6) # 查找有没有人发过来的文件
 
 
 

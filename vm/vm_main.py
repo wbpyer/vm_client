@@ -1,15 +1,14 @@
 import requests
 import json
 import time
-# import shutil
 import socket
 import os
 import re
 import redis
-from threading import Thread
-from vm.vm_error import File_upload_error,mysql_conn
+from vm.vm_error import File_upload_error
 from vm.upload import upload_fdfs ,\
-    upload_mydb,mk_meta_data,connection,download_fdfs,mk_meta_data_leader,mk_meta_data_zip,download_fdfs_file,mk_meta_data_lower
+    upload_mydb,mk_meta_data,connection,download_fdfs,mk_meta_data_leader,\
+    mk_meta_data_zip,download_fdfs_file,mk_meta_data_lower,mk_meta_data_group2project
 from vm.file_uilts import File_utils
 from watchdog.observers import Observer
 from vm.working import FileEventHandler
@@ -17,6 +16,8 @@ from flask import current_app
 from vm.vm_error_backup import lastzip_add_redis,foo
 from win32gui import EnumWindows
 from vm.vm_error_backup import sumbit_redis_list,sumbit_redis_lower,setWallPaper
+from vm.working2 import Group_FileEvent
+from vm.upload2 import download_fdfs2,download_fdfs3
 
 
 
@@ -29,7 +30,7 @@ class Vmare():
     """
     PATH = 'C:\\Users\\worker\\Desktop\\我的办公桌'
 
-    # PATH = 'C:\\Users\\admin\\Desktop\\我的办公桌'
+    # PATH = 'C:\\Users\\Admin\\Desktop\\我的办公桌'
     #  工作区绝对路径地址
 
 
@@ -50,6 +51,8 @@ class Vmare():
 
         self.department= payload.get('department') #部门也是这一个
         self.level =  payload.get("level")  # company ,group ,project   todo 调度端也要加上。
+        self.is_leader = payload.get("is_leader")
+        # self.family   = payload.get("family")  # 这个人是属于那个项目部的，或者是公司的。 todo 调度端也要加上。
         #这里的话，如果传入的参数发生了改变，我自己写的中端需要改变，前端要改，前端要多传入参数，到了中端验证一下
         #中端转发到虚拟机上。目前中台和前端没有这个字段，所以暂时注释掉，
 
@@ -60,8 +63,8 @@ class Vmare():
 
 
         self.payload = payload
-        self.db1 = redis.Redis('172.16.13.1', 6379, 5) # 报
-        self.db2 = redis.Redis('172.16.13.1', 6379, 6) # 发
+        self.db1 = redis.Redis('172.16.240.1', 6379, 5) # 报
+        self.db2 = redis.Redis('172.16.240.1', 6379, 6) # 发
         # self.initpath ='group1/M00/03/C1/rBANAV4B0QuAPQfVAAABylN4jIc348.zip'  #初始化工作区，用户有，就用自己的，没有用这个空的。
         self.filelist = []  # 用来存放更改过的文件。
 
@@ -108,7 +111,9 @@ class Vmare():
             self.lower_db_name = None
 
 
-        self.WORK = True       #用来控制工作区监控的开闭
+        self.WORK = True
+        self.WORK_group = True
+        #用来控制工作区监控的开闭
 
         #todo 测试已经成功，单元1，第一步
 
@@ -135,7 +140,7 @@ class Vmare():
 
             os.mkdir(self.PATH)
             # address,port= connection('db')
-            address = "172.16.13.1"
+            address = "172.16.240.2"
             port = 5002
             d = {"role":self.role}
             resp = requests.post("http://" + str(address) + ":" + str(port) + "/mysql/" + self.db_name + "/excel/find",json=d)
@@ -171,13 +176,19 @@ class Vmare():
                 # else:
                 #     print("没有上报来的文件，继续工作")
             else:
-                #如果没有，就下载初始化的业务模板，这里建一张mysql吧，把mysql,
+                # todo 如果没有，就下载初始化的业务模板，这里建一张mysql吧，把mysql,
                 try:
                     # todo 去表里面查，然后拿到向应业务的初始化模板，这里有个步骤拿到表，连接数据库
-                    self.initpath = mysql_conn(self.role,self.department,self.level)
+                    dic = {"role":self.role, "department":self.department, "level":self.level}
+                    records = requests.post("http://172.16.240.2:5002/mysql/find_initpath", json=dic)
+                    # 接口过去查
+                    records = json.loads(records.text)  # 拿到一个列表或者none
 
-                    download_fdfs(self.initpath)
-                    File_utils.unzip()
+                    if records:
+                        self.initpath = records
+
+                        download_fdfs(self.initpath)
+                        File_utils.unzip()
                 except Exception as e:
                     print(e)
 
@@ -221,7 +232,7 @@ class Vmare():
             print(data)
 
             # service = connection('db')
-            service = ("172.16.13.1",5002)
+            service = ("172.16.240.2",5002)
             resp = upload_mydb(data, *service,self.db_name,type)
             if resp.status_code == 200:
                 return 0
@@ -244,7 +255,7 @@ class Vmare():
 
             # service = connection('db')
             # service = ("127.0.0.1",5001)
-            service = ("172.16.13.1", 5002)
+            service = ("172.16.240.2", 5002)
             resp = upload_mydb(data, *service,self.db_name,type)
             if resp.status_code == 200:
                 return 0
@@ -266,7 +277,7 @@ class Vmare():
 
             # service = connection('db')
             # service = ("127.0.0.1", 5001)
-            service = ("172.16.13.1", 5002)
+            service = ("172.16.240.2", 5002)
             resp = upload_mydb(data, *service, self.db_name,type='delete')
             if resp.status_code == 200:
                 return 0
@@ -290,7 +301,7 @@ class Vmare():
         dat["dbname"] = self.db_name
         # address,port=connection('db')
 
-        address = "172.16.13.1"
+        address = "172.16.240.2"
         port = 5002
 
         resp = requests.post("http://" + str(address) + ":" + str(port) + "/db"  + "/excel/movename",
@@ -308,7 +319,7 @@ class Vmare():
         ret = upload_fdfs(file)
 
         if ret:
-            lower = [i + ":" + self.role for i in self.lower_db_name]
+            lower = [i for i in self.lower_db_name]
             sumbit_redis_lower(lower, ret)
 
             print(ret)
@@ -316,7 +327,7 @@ class Vmare():
 
             # service = connection('db')
             # service = ("127.0.0.1",5001)
-            service = ("172.16.13.1", 5002)
+            service = ("172.16.240.2", 5002)
             for i in self.lower_db_name:
                 resp = upload_mydb(data, *service, i, type='lower')
 
@@ -333,7 +344,7 @@ class Vmare():
 
 
         if ret:
-            leader = [i +":"+ self.role for i in self.leader_db_name]  # 在原有基础加上业务去标识出来这个字段.
+            leader = [i for i in self.leader_db_name]  # 在原有基础加上业务去标识出来这个字段.
             sumbit_redis_list(leader,ret)
 
             print(ret)
@@ -341,13 +352,37 @@ class Vmare():
 
             # service = connection('db')
             # service = ("127.0.0.1",5001)
-            service = ("172.16.13.1",5002)
+            service = ("172.16.240.2",5002)
             for i in self.leader_db_name:
                 resp = upload_mydb(data, *service, i,type='leader')
 
             return 1
 
 
+    def group2project(self,records:list,file):
+
+        """
+        工区上报给领导的文件。
+        :param file:
+        :return:
+        """
+        ret = upload_fdfs(file)
+
+        if ret:
+            leader = [i  for i in records]  # 数据库名子是唯一的，就用数据库名字在、redis里面报就可以了。
+            sumbit_redis_list(leader, ret)
+
+
+            print(ret)
+            data = mk_meta_data_group2project(ret, self.payload, self.user_id, self.user_name)  # 这里没改,就是业务字段便了
+
+            # service = connection('db')
+            # service = ("127.0.0.1",5001)
+            service = ("172.16.240.2", 5002)
+            for i in records:
+                resp = upload_mydb(data, *service, i, type='leader')
+
+            return 1
 
 
     def _3389(self,ip):
@@ -400,7 +435,7 @@ class Vmare():
 
         # os.system("start explorer C:\\Users\\Admin\\Desktop\\我的办公桌")
         os.system("start explorer C:\\Users\\worker\\Desktop\\我的办公桌")
-        # todo 这里还要根据不同的权限，弹出不同的页面。这里目前好实现，一会直接一并改写出来得了。先空着，这里还没有具体落地。
+
 
         observer = Observer()
         event_handler = FileEventHandler(self)
@@ -419,7 +454,7 @@ class Vmare():
             # path = self.db1.hget(self.role,"path")
             #
             # name = self.db1.hget(self.role,"name")
-            myredis = self.db_name + ":" + self.role
+            myredis = self.db_name
             #todo 这里不用动,但是实际上role里面不再是岗位,而是变成了别的东西,或者说暂时先不动.
             teps = self.db1.rpop(myredis)
             fa = self.db2.rpop(myredis)
@@ -458,6 +493,80 @@ class Vmare():
         # self.exit()
 
 
+    def working2group(self):
+        """
+        实时监控文件，替用户完成草报副拉的文件功能,工区用的
+        :return:
+        """
+
+        # 下面的代码是控制桌面壁纸的切换 ，增加了壁纸切换的功能 ，暂时没有启用这个功能，所以注销掉了
+        # 根据不同的编号，设置不同的壁纸，这个编号是前端点击时候传过来的，需要，这里可以留着以后，云调度的时候
+        # 可以每个人分不同的模板时候用，1到16个模板，点击哪个，前端传回来哪个，就下载哪个模板。当然前端也可以不
+        # 传，留一个空的字段。
+
+        # if self.templ:
+        #     判断前端传回来的模板，调取不同的壁纸，和模板。
+        #     if self.templ == 1:
+        #         setWallPaper(1)
+        #     elif self.templ ==2:
+        #         setWallPaper(2)
+        #     elif self.templ ==3:
+        #         setWallPaper(3)
+
+        # os.system("start explorer C:\\Users\\Admin\\Desktop\\我的办公桌")
+        os.system("start explorer C:\\Users\\worker\\Desktop\\我的办公桌")
+        # todo 这里还要根据不同的权限，弹出不同的页面。这里目前好实现，一会直接一并改写出来得了。先空着，这里还没有具体落地。
+
+        observer = Observer()
+        event_handler =  Group_FileEvent(self)
+        observer.schedule(event_handler, self.PATH, recursive=True)
+        observer.start()
+        addrs = socket.getaddrinfo(socket.gethostname(), None)
+        ip = [item[4][0] for item in addrs if ':' not in item[4][0]][0]
+        # t =  Thread(target=self._3389,args=(ip,))
+        # t.start()
+
+        while self.WORK_group:
+            # d = {"user_id": self.user_id, "user_name": self.user_name}
+            # 找报送上来的文件放到收里，存在就不放，不存在就放。
+
+            current_app.logger.error("我在循环中不断寻找redis")
+            # path = self.db1.hget(self.role,"path")
+            #
+            # name = self.db1.hget(self.role,"name")
+            myredis = self.db_name
+            # todo 这里不用动,但是实际上role里面不再是岗位,而是变成了别的东西,或者说暂时先不动.
+            teps = self.db1.rpop(myredis)
+            fa = self.db2.rpop(myredis)
+
+            print(11111111, teps, 222222, fa)
+
+            if teps:
+                tepl = teps.decode().split(",")
+
+                path = tepl[0]
+                name = tepl[1]
+
+                download_fdfs_file(path, name)
+
+            if fa:
+                fal = fa.decode().split(",")
+
+                path = fal[0]
+                name = fal[1]
+
+                download_fdfs_file(path, name)
+
+            # self._3389(ip)
+            print(self.WORK)
+            time.sleep(2)
+            # a = input("input:")
+            # if a == 'quit':
+            #     self.WORK= False
+
+        observer.stop()
+        observer.join()
+        # self.exit()
 
 
     def exit(self):
@@ -518,7 +627,7 @@ class Vmare():
         # shutil.rmtree(self.PATH)
         # todo  如果这里毕工是直接恢复镜像的话，就不用删除了，让毕工直接恢复就行,下面这部可以省略
         os.system("rd/s/q  C:\\Users\\worker\\Desktop\\我的办公桌")
-        #
+
         # os.system("rd/s/q  C:\\Users\\Admin\\Desktop\\我的办公桌")
 
 
@@ -531,7 +640,7 @@ class Vmare():
             ip = [item[4][0] for item in addrs if ':' not in item[4][0]][0]
             data = {'ip':ip}
             #这里还需要拿到ip,去关闭对应的ip
-            resp = requests.post("http://172.16.13.1:5001/vm/status",json = data)
+            resp = requests.post("http://172.16.240.2:5003/vm/status",json = data)
             print(resp.text)
         except Exception as e:
             print(e)
@@ -555,7 +664,280 @@ class Vmare():
 
 
 
+    def exit_group(self):
+        """
+        工区特殊化，暂时未启用。
+        :return:
+        """
+        # self.WORK = False
 
+        current_app.logger.error("启动退出程序,开始退出")
+        #首先关闭所有占用的窗口，特别是文件
+
+        # try:
+        #
+        #     EnumWindows(foo, 0)
+        # except Exception as e:
+        #     print(e)
+
+
+
+        zippath = File_utils.mk_package(self.PATH)
+        lastzip_add_redis(self.user_id, self.user_name, zippath)  #打包后第一时间记录redis,防止丢失,这是重点.
+
+
+
+        self.filelist = list(set(self.filelist))
+        if self.filelist: # 空的就是没改过，就不用管了
+            # files = File_utils.get_all_file() 之前是遍历所有，现在就不用了只去操作改动过的就行。
+            print(self.filelist)
+            for file in self.filelist:
+
+                if os.path.exists(file):  #判断文件是否存在。
+                    if  file.split('\\')[-2] in [ '报 安全部',"报 物资设备部","报 经营部","报 工程部",'我的办公桌','收',"发"]:
+                        # 注意发送,也是发到对方的收里面
+                            #如果符合条件就开始上传到数据库端，数据库再去做比对。不符合条件，就不管。
+                        try:
+
+                            self.upload_exit(file)
+                            # time.sleep(2)
+                            # print("失败继续")
+
+                            print("file upload OK")
+                        except Exception as e:
+                            print(e, "记录日志那个文件没有保存成功，程序可以继续运行。")
+                            raise File_upload_error(e)
+
+
+                            #记录日志，那个用户的那个文件没有上传成功。
+
+
+
+        self.upload_zip(zippath,type='zip')
+
+        print("zip upload OK")
+        os.remove(self.PATH+'.zip') # 上传完，清理掉
+
+
+        # time.sleep(2)
+        # todo“给程序一些时间释放占用资源，然后再删除”
+        # shutil.rmtree(self.PATH)
+        # todo  如果这里毕工是直接恢复镜像的话，就不用删除了，让毕工直接恢复就行,下面这部可以省略
+        os.system("rd/s/q  C:\\Users\\worker\\Desktop\\我的办公桌")
+        #
+        # os.system("rd/s/q  C:\\Users\\Admin\\Desktop\\我的办公桌")
+
+
+
+        #todo 毕工可以实现镜像，就不用考虑这个文件残留问题。有错误就捕获启动处理程序就行
+        # if  not os.path.exists(self.PATH):
+        # 这段代码是用来更改状态的，虚拟机状态。
+        try:
+            addrs = socket.getaddrinfo(socket.gethostname(), None)
+            ip = [item[4][0] for item in addrs if ':' not in item[4][0]][0]
+            data = {'ip':ip}
+            #这里还需要拿到ip,去关闭对应的ip
+            resp = requests.post("http://172.16.240.2:5003/vm/status",json = data)
+            print(resp.text)
+        except Exception as e:
+            print(e)
+
+
+        #todo 然后注销一下，然后就不用管了。可以每次登录的时候可以再删一次。
+
+        # os.system("shutdown -c")
+        #我的程序死了也没事，毕工会吊起来我
+
+
+
+
+
+
+        # else:
+        #     print("有残留文件，通知运维检查机器，删除掉残留文件，不能给别人用这个。需要删除掉原有残留文件。")
+        #
+        #     current_app.logger.error(" def_exit: 用户退出，文件夹没有删除干净")
+        #     raise File_exists_error('有残留文件')
+
+
+
+    def start2(self):
+        """
+
+        替用户下载好数据
+        先查MYSQL的路径
+        然后下载，
+        然后解压 ,如果下不到，证明客户没有数据。那就让他继续工作就行。这里不能让程序崩溃掉。
+        下载时候要考虑两点，一个是自己的最后一次文件包，而是有没有别人给报送上来的表，要去查出来
+        放到自己的草里面。相对应的人机无法，日周月年，都需要放到草里面。做两方面考虑。
+        3.25这个接口要重启，逻辑是根据业务查自己的库有没有数据，如果有就下载，如果没有
+        就去模板库里面下载，先不考虑，调岗的问题。
+        :param :
+        :return:
+        """
+
+        try:
+            # todo 判断一下，路径在不在，如果有就再次清理，因为是注销之后第一次登录，是可以清理的。
+            if os.path.exists(self.PATH):
+                print('我的办公桌已存在')
+                os.system("rd/s/q  C:\\Users\\worker\\Desktop\\我的办公桌")
+                # os.system("rd/s/q  C:\\Users\\Admin\\Desktop\\我的办公桌")
+            print('没有我的办公桌')
+            os.mkdir(self.PATH)
+            # address,port= connection('db')
+            address = "172.16.240.2"
+            port = 5002
+            d = {"role": self.role}
+            print(d)
+            resp = requests.post("http://" + str(address) + ":" + str(port) + "/mysql/" + self.db_name + "/excel/find",
+                                 json=d)
+            print(resp.text)
+            # 查询有无该业务，最后一次的登录文件。如果有，就下载。
+            # print(resp)
+            path = json.loads(resp.text)
+            print(path)
+
+            # if path:
+            #     print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            #     # path = path.encode()
+            #
+            #     # 下载，解压，
+            #     download_fdfs2(path, "我")
+            #     path = 'C:\\Users\\worker\\Desktop\\我的办公桌.zip'
+            #     File_utils.unzip_file(path)
+            #     self.down_lowers()
+            #     # File_utils.unzip()
+
+            # else:
+            #     print('222222222222222222222222222222222222222222222222')
+                # 如果没有，就下载初始化的业务模板，这里建一张mysql吧，把mysql,
+            try:
+                # todo 去表里面查，然后拿到向应业务的初始化模板，这里有个步骤拿到表，连接数据库
+
+                dic = {"role": self.role, "department": self.lower_role[0], "level": self.level}
+                records = requests.post("http://172.16.240.2:5002/mysql/find_initpath", json=dic)
+                # 接口过去查
+                records = json.loads(records.text)  # 拿到一个列表或者none
+
+
+                self.initpath = records
+                download_fdfs2(self.initpath, "我")
+                path = 'C:\\Users\\worker\\Desktop\\我的办公桌.zip'
+                File_utils.unzip_file(path)
+                self.down_lowers()
+                # File_utils.unzip()
+            except Exception as e:
+                print(e)
+            print('下载完登录用户的zip了')
+
+
+        except Exception as e:
+            print("我是start，我有问题:{0}".format(e))
+
+    def down_lowers(self):
+        # 领导查看时，下载某业务所有下属的文件zip
+        address = "172.16.240.2"
+        port = 5002
+        d = {"role": self.role}
+        print(self.lower_id)
+        for i in self.lower_id:
+            print(i)
+            db_name = str(i) + ":" + str(self.lower_name[self.lower_id.index(i)]) + ":" + str(
+                self.lower_job_id[self.lower_id.index(i)]) + ":" + str(self.lower_role[self.lower_id.index(i)])
+
+            resp = requests.post("http://" + str(address) + ":" + str(port) + "/mysql/" + db_name + "/excel/find",
+                                 json=d)
+            # 查询有无该业务，最后一次的登录文件。如果有，就下载。
+            print(resp)
+            path = json.loads(resp.text)
+            print(path)
+
+            if path:
+                print('11111111111111111111111111111111')
+                # path = path.encode()
+                # 下载，解压，
+                download_fdfs3(path, self.lower_name[self.lower_id.index(i)])
+                path = "C:\\Users\\worker\\Desktop\\我的办公桌\\" + self.lower_name[self.lower_id.index(i)] + "的办公桌.zip"
+                print(path)
+                File_utils.unzip_file(path)
+                # 添加到登录人的办公桌+
+            else:
+                print('222222222222222222222222222222')
+                # 如果没有，就下载初始化的业务模板，这里建一张mysql吧，把mysql,
+                try:
+                    # todo 去表里面查，然后拿到向应业务的初始化模板，这里有个步骤拿到表，连接数据库
+                    dic = {"role": self.role, "department": self.lower_role[0], "level": self.level}
+                    records = requests.post("http://172.16.240.2:5002/mysql/find_initpath", json=dic)
+                    # 接口过去查
+                    records = json.loads(records.text)  # 拿到一个列表或者none
+                    self.initpath = records
+
+                    print(self.initpath)
+                    download_fdfs3(self.initpath, self.lower_name[self.lower_id.index(i)])
+                    path = "C:\\Users\\worker\\Desktop\\我的办公桌\\" + str(
+                        self.lower_name[self.lower_id.index(i)]) + "的办公桌.zip"
+                    print(path)
+                    File_utils.unzip_file(path)
+                    # 添加到登录人的办公桌
+                    # File_utils.unzip()
+                except Exception as e:
+                    print(e)
+        print('下载完下属的文件了')
+        # File_utils.unzip_file()
+
+        # 已经改成实时报送了， 所以不需要，下载了，redis里面把这个事情就干了。
+        # resp = requests.post(
+        #     "http://" + str(address) + ":" + str(port) + "/mysql/" + self.db_name + "/excel/find/submit",
+        #     json=d)
+        #
+        # path = json.loads(resp.text)
+        # if path:
+        #     for file in path:
+        #         name = file[0]
+        #         filepath = file[1]
+        #         # work_id = file[2]
+        #         # date_id = file[3]
+        #         # download_fdfs_file(filepath, name, work_id, date_id)
+        #         download_fdfs_file(filepath, name)
+        # else:
+        #     print("没有任何文件，已经系统初始化完成")
+
+    def exit2(self):
+        print('领导要退出了~~~~~~~~')
+        '''领导用户退出时，要做的工作。直接退出不镜像'''
+        # self.WORK = False
+
+        current_app.logger.error("启动退出程序,开始退出")
+        # 首先关闭所有占用的窗口，特别是文件
+
+        # try:
+        #
+        #     EnumWindows(foo, 0)
+        # except Exception as e:
+        #     print(e)
+
+        # time.sleep(2)
+        # todo“给程序一些时间释放占用资源，然后再删除”
+        # shutil.rmtree(self.PATH)
+        # todo  如果这里毕工是直接恢复镜像的话，就不用删除了，让毕工直接恢复就行,下面这部可以省略
+        os.system("rd/s/q  C:\\Users\\worker\\Desktop\\我的办公桌")
+        #
+        # os.system("rd/s/q  C:\\Users\\admin\\Desktop\\我的办公桌")
+
+        # todo 毕工可以实现镜像，就不用考虑这个文件残留问题。有错误就捕获启动处理程序就行
+        # if  not os.path.exists(self.PATH):
+        # 这段代码是用来更改状态的，虚拟机状态。
+        try:
+            data = {'role': self.role}
+            resp = requests.post("http://172.16.240.2:5003/vm/status", json=data)
+            print(resp.text)
+        except Exception as e:
+            print(e)
+
+        # todo 然后注销一下，然后就不用管了。可以每次登录的时候可以再删一次。
+
+        # os.system("shutdown -c")
+        # 我的程序死了也没事，毕工会吊起来我
 
 
 

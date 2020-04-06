@@ -1,5 +1,4 @@
 from fdfs_client.client import get_tracker_conf,Fdfs_client
-from vm.file_uilts import File_utils
 import requests
 import json
 import random
@@ -82,6 +81,45 @@ def mk_meta_data_lower(ret:dict,payload:dict,user_id,user_name) -> dict:
     print(mysql_date)
     return mysql_date
 
+
+def mk_meta_data_group2project(ret: dict, payload: dict, user_id, user_name) -> dict:
+    """
+
+    :param ret:
+    :param payload:
+    :return:
+    """
+
+    mysql_date = {}
+    file_name = ret.get('Local file name')
+    mysql_date['file_name'] = file_name.split('\\')[-1]
+
+    # mysql_date['path'] = "http://" + ret.get("Storage IP").decode() + "/" + ret.get('Remote file_id').decode()  # 最终路径
+    mysql_date['path'] = ret.get('Remote file_id').decode()
+    mysql_date['file_ip'] = ret.get('Storage IP').decode()
+    status_id = file_name.split('\\')[-2]  # 草，报，收，垃
+    # date_id = file_name.split('\\')[-3]
+    # work_id = file_name.split('\\')[-4]
+    mysql_date['status_id'] = status_id
+    # mysql_date['date_id'] = date_id
+    # mysql_date['work_id'] = work_id
+    mysql_date['role'] = payload.get('role')
+
+    mysql_date["role_id"] = payload.get('role_id')
+
+    mysql_date["user_id"] = user_id
+    mysql_date["user_name"] = user_name
+
+    mysql_date['department_id'] = payload.get('department_id')  # 需要什么数据，去负载里面求出来即可。
+    mysql_date['department'] = payload.get('department')
+    # 需要什么数据，去负载里面求出来即可。
+    # 上报领导的其他数据，如果和这个人相等，就直接拿，或者去token里，或者就留空。
+    print(mysql_date)
+    return mysql_date
+
+
+
+
 def mk_meta_data_leader(ret:dict,payload:dict,user_id,user_name) -> dict:
     """
 
@@ -104,7 +142,8 @@ def mk_meta_data_leader(ret:dict,payload:dict,user_id,user_name) -> dict:
     mysql_date['status_id'] = status_id
     # mysql_date['date_id'] = date_id
     # mysql_date['work_id'] = work_id
-    mysql_date['role'] = payload.get('role')  #这里面成了业务
+    mysql_date['role'] = payload.get('role')
+
     mysql_date["role_id"] = payload.get('role_id')
 
     mysql_date["user_id"] = user_id
@@ -233,7 +272,7 @@ def download_fdfs(path):
 
     # PATH = 'C:\\Users\\admin\\Desktop\\我的办公桌\\我的办公桌.zip'    # 下到本机后变成什么。
     PATH = 'C:\\Users\\worker\\Desktop\\我的办公桌\\我的办公桌.zip'
-    fdfs_url = "http://172.16.13.1:8080/" + path
+    fdfs_url = "http://172.16.240.1:8888/" + path
     req = requests.get(fdfs_url)
 
     with open(PATH, 'wb') as fobj:
@@ -242,7 +281,7 @@ def download_fdfs(path):
 
 
 
-# def download_fdfs_file(path:str,name,work_id,date_id):
+
 def download_fdfs_file(path:str,name):
     """
     下载别人上报和发下的数据
@@ -280,14 +319,14 @@ def download_fdfs_file(path:str,name):
     # elif work_id == 4:
     #     work_id = "法"
 
-    # dest = "C:\\Users\\admin\\Desktop\\我的办公桌\\收\\" + name
+    # dest = "C:\\Users\\Admin\\Desktop\\我的办公桌\\收\\" + name
     dest = "C:\\Users\\worker\\Desktop\\我的办公桌\\收\\" + name
     # 目前上报和发下，都下载到一个文件夹
     # dest = "C:\\Users\\worker\\Desktop\\test\\{0}\\{1}\\收\\".format(work_id,date_id)+ name
     if not os.path.exists(dest):
         # todo 这里的逻辑就是，如果存在收的这个文件，就什么都不做，如果不在就下载，证明这个时新报送上来的，这里已经实线了，就这么办。
 
-        url = "http://172.16.13.1:8080/" + path
+        url = "http://172.16.240.1:8888/" + path
         req = requests.get(url)
 
         with open(dest, 'wb') as fobj:

@@ -6,7 +6,6 @@ import requests
 
 
 
-
 app = Flask(__name__)
 CORS(app)  # 允许跨站访问
 
@@ -21,26 +20,32 @@ def vm_exit():
     """
     app.logger.error("bi_come_in_exit_now_remote_ip: %s user_agent: %s ", request.remote_addr, request.user_agent.browser)
 
-
-
     try:
 
-        Vmare._instance.WORK = False
-        app.logger.error("退出程序已经启动")
-        Vmare._instance.exit()
-        print(Vmare._instance)
+        """
+        根据不同的情况调用不同的退出，目前工区和普通人员走一个退出通道就行。"""
+        # if Vmare._instance.role in["安全管理报表","现场管理报表","经营管理报表","物资设备管理报表"]:
+        #     app.logger.error("退出程序已经启动")
+        #     Vmare._instance.WORK_group = False
+        #     Vmare._instance.exit_group()
+        # else:
+        if Vmare._instance.is_leader == 1:
+            Vmare._instance.exit2()
+
+        else:
+
+            Vmare._instance.WORK = False
+            app.logger.error("退出程序已经启动")
+            Vmare._instance.exit()
+            print(Vmare._instance)
 
 
         return "exit is OK", 200
 
 
-
     except Exception as e:
         app.logger.error("退出程序发生错误 s% ",e)
         return "exit exception", 409
-
-
-
 
     # except File_exists_error as e:
     #     print('通知文件没有删除干净,运维登录删除文件')
@@ -69,10 +74,12 @@ def vm_exit():
     #     #需要毕工调度起来我的错误处理程序。
 
 
-
-
 @app.route('/vm/work',methods=['GET'])
 def vm_working():
+    """
+    项目部公司人员走的接口。
+    :return:
+    """
 
 
     try:
@@ -125,16 +132,82 @@ def vm_start():
     #如过这是领导要看，就走这个逻辑，一个单独的逻辑，这里面的模块交给了王倩。
 
     try:
-        requests.get("http://127.0.0.1:5000/vm/work",timeout=1)
+        if vm.is_leader == 0:
+
+
+            requests.get("http://127.0.0.1:5000/vm/work",timeout=1)
+        else:
+            requests.get("http://127.0.0.1:5000/vm/work2", timeout=1)
+
     except Exception as e:
         print("我自己起了文件监控程序".format(e))
 
 
-
-
     return 'ok'
 
-    #在这里记录日志，里面就不用记录了。
+
+@app.route('/vm/work2',methods=['GET'])
+def vm_working2():
+    # 先去下载登录的这个人的zip
+    # 然后再去下载下属每个人的zip，最后将所有下属的zip合并到登录的人的zip中解压加载
+
+    try:
+        print('来了~~~~~~~~~~~~~~~~~~~~~~')
+        # start之前已经
+        Vmare._instance.start2()
+
+        # 单元测试2成功   接下来需要配合数据库，开发数据库端  联合数据库测试成功
+            #等待用户退出虚拟机时，调用下面这个，这个信号，应该是运维给的，中间用户会有工作的时间。
+            # 上面会阻塞主，用户一直在虚拟机上工作。直到由运维将请求发送给，退出接口，才会执行下面的工作。
+
+            # vm.exit()
+
+        return "ok",200
+    except Exception as e:
+
+        print("i am outside layer error is:{0}".format(e))
+        app.logger.error("error_msg: %s remote_ip: %s user_agent: %s ",e,request.remote_addr,request.user_agent.browser)
+
+        res = {'status': 405, "data": "error is:{0}".format(e)}
+        return jsonify(res),405
+
+
+
+
+
+@app.route('/vm/group',methods=['GET'])
+def group():
+    """
+    工区人员走的接口。
+    :return:
+    """
+
+
+    try:
+        #工区也是这个start 但是working会不一样。
+        Vmare._instance.start()
+
+        Vmare._instance.working2group()
+
+
+
+        # 单元测试2成功   接下来需要配合数据库，开发数据库端  联合数据库测试成功
+            #等待用户退出虚拟机时，调用下面这个，这个信号，应该是运维给的，中间用户会有工作的时间。
+            # 上面会阻塞主，用户一直在虚拟机上工作。直到由运维将请求发送给，退出接口，才会执行下面的工作。
+
+            # vm.exit()
+
+        return "ok",200
+    except Exception as e:
+
+        print("i am outside layer error is:{0}".format(e))
+        app.logger.error("error_msg: %s remote_ip: %s user_agent: %s ",e,request.remote_addr,request.user_agent.browser)
+
+        res = {'status': 405, "data": "error is:{0}".format(e)}
+        return jsonify(res),405
+
+
+
 
 
 @app.route('/vm/health',methods=['POST','GET'])

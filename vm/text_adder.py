@@ -4,15 +4,33 @@
 """
 
 from vm.file_uilts import File_utils
-from vm.upload import upload_fdfs
 import sqlalchemy
 from vm.vm_error import All_Texts
 from sqlalchemy.orm import sessionmaker
+from fdfs_client.client import get_tracker_conf,Fdfs_client
+import os
+
+
+TRCKER_CONF = 'C:\\Users\\Admin\\Desktop\\client2.conf'
+def upload_fdfs(path:str):
+    """
+    #上传FDFS，api
+    :param path:文件的绝对路径
+    :return: 上传后FDFS返回的信息
+    """
+
+    trackers = get_tracker_conf(TRCKER_CONF)
+    client = Fdfs_client(trackers)
+    ret = client.upload_by_filename(path)
+    if ret.get('Status') == 'Upload successed.':
+
+        return ret
+    return
 
 
 def adder(path:str,department,level,business):
     print(111111111111)
-    host = '172.16.13.1'
+    host = '172.16.240.1'
     user = 'root'
     password = '123456'
     port = 3306
@@ -50,5 +68,14 @@ def adder(path:str,department,level,business):
 if __name__ == "__main__":
     #现在有了一个文件，先测试，然后再测试的基础上，在增加。
 
-    adder("C:\\Users\\Admin\\Desktop\\我的办公桌","安全部","project","特殊工种")
+
+    adder("C:\\Users\\Admin\\Desktop\\我的办公桌","安全部","project","安技交底")
+
+    os.remove("C:\\Users\\Admin\\Desktop\\我的办公桌.zip")
+
+
+
+
+
+
 
